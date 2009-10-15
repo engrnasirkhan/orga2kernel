@@ -1,0 +1,111 @@
+     1                                  BITS 16
+     2                                  
+     3                                  
+     4                                  global start
+     5                                  extern GDT_DESC
+     6                                  extern IDT_DESC
+     7                                  extern idtFill
+     8                                  
+     9                                  ;Aca arranca todo, en el primer byte.
+    10                                  start:
+    11 00000000 FA                      		cli			;no me interrumpan por ahora
+    12                                  		;xchg	bx, bx
+    13 00000001 E9(2C12)                		jmp 	0x122c ;;  bienvenida 
+    14                                  
+    15                                  ;aca ponemos todos los mensajes		
+    16 00000004 496E696369616E646F-     iniciando: db 'Iniciando el kernel mas inutil del mundo'
+    17 0000000D 20656C206B65726E65-
+    18 00000016 6C206D617320696E75-
+    19 0000001F 74696C2064656C206D-
+    20 00000028 756E646F           
+    21                                  iniciando_len equ $ - iniciando		
+    22                                  
+    23                                  
+    24                                  bienvenida:
+    25                                  
+    26                                  ;; 		IMPRIMIR_MODO_REAL iniciando, iniciando_len, 0x07, 0, 0
+    27                                  ;; 		call	disable_A20
+    28                                  ;; 		xchg	bx, bx
+    29                                  ;; 		call	check_A20
+    30                                  ;; 		xchg	bx, bx
+    31                                  ;; 		call 	enable_A20
+    32                                  ;; 		xchg	bx, bx
+    33                                  ;; 		call	check_A20
+    34                                  ;; 		xchg 	bx, bx
+    35                                  
+    36                                  		;deshabilitamos las interrupciones
+    37 0000002C FA                      		cli
+    38                                  		
+    39                                  		;cargamos la gdt
+    40 0000002D 0F0116[0000]            		lgdt 	[GDT_DESC]
+    41                                  		
+    42                                  		;seteamos el bit PE del registro cr0
+    43 00000032 0F20C0                  		mov 	eax, cr0
+    44 00000035 660D01000000            		or  	eax, 01h
+    45 0000003B 0F22C0                  		mov 	cr0, eax
+    46                                  		
+    47                                  		;segundo segmento en la GDT, el primero es nulo
+    48 0000003E EA[4300]0800            		jmp 	0x08:modo_protegido
+    49                                  
+    50                                  BITS 32
+    51                                  modo_protegido:
+    52                                  
+    53 00000043 66B81000                		mov 	ax, 0x10
+    54 00000047 8ED8                    		mov 	ds, ax		;acomodo el segmento de datos antes de hacer lio
+    55 00000049 8EC0                    		mov 	es, ax		;acomodo el segmento de datos antes de hacer lio
+    56 0000004B 8EE0                    		mov 	fs, ax		;acomodo el segmento de datos antes de hacer lio
+    57 0000004D 8EE8                    		mov 	gs, ax		;acomodo el segmento de datos antes de hacer lio
+    58 0000004F 8ED0                    		mov	ss, ax		;acomodo el segmento de pila antes de usarla
+    59                                  		
+    60 00000051 E8(00000000)            		call	idtFill
+    61                                  		
+    62 00000056 0F011D[00000000]        		lidt	[IDT_DESC]
+    63                                  	
+    64 0000005D 66B82000                		mov 	ax, 0x20
+    65                                  ;; 		mov 	ax, 0x0	;Segmento de datos con base 0xB8000. 0x18: limite en 0xF
+    66 00000061 8EC0                    		mov 	es, ax
+    67                                  
+    68                                  	
+    69 00000063 B9A00F0000              		mov 	ecx, (25 * 80) << 1
+    70 00000068 66B80010                		mov 	ax, 0x1000
+    71 0000006C 31FF                    		xor 	edi, edi
+    72                                  
+    73 0000006E 6687DB                  		xchg bx,bx
+    74                                  	
+    75                                  ;; 		mov [es:edi], edi
+    76                                  
+    77                                  		.cicloazul:
+    78                                  			;xchg bx, bx
+    79 00000071 66AB                     			stosw
+    80 00000073 E2FC                    			loop 	.cicloazul
+    81                                  		
+    82 00000075 B939000000              		mov 	ecx, mensaje_len
+    83 0000007A BF5A060000              		mov 	edi, ((10 * 80) + 13) << 1
+    84                                  		
+    85 0000007F B41A                    		mov 	ah, 0x1A
+    86 00000081 BE[90000000]            		mov 	esi, mensaje
+    87                                  		
+    88                                  		.ciclo:
+    89 00000086 AC                      			lodsb
+    90 00000087 66AB                    			stosw
+    91 00000089 E2FB                    			loop .ciclo
+    92                                  			
+    93                                  		
+    94 0000008B E9FBFFFFFF              		jmp 	$
+    95                                  		
+    96 00000090 4D69207669656A6120-     mensaje:	db 'Mi vieja mula ya no es lo que era! (ahora protegidos :) )'
+    97 00000099 6D756C61207961206E-
+    98 000000A2 6F206573206C6F2071-
+    99 000000AB 756520657261212028-
+   100 000000B4 61686F72612070726F-
+   101 000000BD 74656769646F73203A-
+   102 000000C6 292029             
+   103                                  mensaje_len equ $ - mensaje
+   104                                  
+   105                                  ;; %include "macrosmodoreal.mac"
+   106                                  
+   107                                  ;; %include "a20.asm"
+   108                                  
+   109                                  
+   110                                  
+   111                                  

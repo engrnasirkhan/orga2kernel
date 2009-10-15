@@ -1,0 +1,70 @@
+     1                                  global print 
+     2                                  
+     3                                  %define param(x) ebp+(x*4)
+     4                                  
+     5                                  print:
+     6 00000000 60                      	pusha
+     7 00000001 89E5                    	mov ebp, esp
+     8 00000003 81C520000000            	add ebp, 0x20
+     9                                  	;; ebp queda apuntando al eip de retorno	
+    10 00000009 06                      	push es
+    11 0000000A 1E                      	push ds	
+    12                                  
+    13                                  	;; corro todas las lineas
+    14                                  	;; de la pantalla hacia arriba
+    15 0000000B 66B81800                	mov ax, 0x18
+    16 0000000F 8EC0                    	mov es, ax
+    17 00000011 8ED8                    	mov ds, ax
+    18                                  
+    19 00000013 31FF                    	xor edi, edi
+    20 00000015 BEA0000000              	mov esi, 80<<1 		;80 columnas de word
+    21                                  
+    22 0000001A B980070000              	mov ecx, 80*24
+    23 0000001F F366A5                  	rep movsw		;subi todas las lineas para arriba
+    24                                  	
+    25                                  	;; ahora limpio la ultima linea
+    26 00000022 31C0                    	xor eax, eax
+    27 00000024 B950000000              	mov ecx, 80
+    28 00000029 F366AB                  	rep stosw 
+    29                                  	
+    30                                  	;; apunto es al segmento de datos
+    31                                  	;; junto con es:edi apunto al string
+    32 0000002C 66B81000                	mov ax, 0x10
+    33 00000030 8EC0                    	mov es, ax
+    34                                  	
+    35 00000032 8B7D04                   	mov edi, [param(1)]		;puntero al string
+    36                                  	
+    37                                  	;; calculo el largo del string que al final tiene un 0
+    38 00000035 FC                      	cld 			;limpio el flag de direccion
+    39 00000036 31C9                    	xor ecx, ecx
+    40 00000038 F7D1                    	not ecx
+    41                                  	
+    42 0000003A 30C0                    	xor al, al
+    43 0000003C F2AE                    	repnz scasb
+    44                                  
+    45 0000003E 89CB                    	mov ebx, ecx
+    46 00000040 31C9                    	xor ecx, ecx
+    47 00000042 F7D1                    	not ecx
+    48 00000044 29D9                    	sub ecx, ebx
+    49                                  	;; en ecx tengo la cantidad de caracteres
+    50                                  	;; ds:esi puntero al string
+    51                                  	;; es:edi puntero a la pantalla
+    52 00000046 66B81000                	mov ax, 0x10
+    53 0000004A 8ED8                    	mov ds, ax
+    54 0000004C 8B7504                   	mov esi, [param(1)]
+    55                                  	
+    56 0000004F 66B81800                	mov ax, 0x18
+    57 00000053 8EC0                    	mov es, ax
+    58 00000055 BF000F0000              	mov edi, 80*24*2 	;me paro en la ultima linea
+    59                                  
+    60 0000005A B43F                    	mov ah, 0x3F
+    61                                  	
+    62                                  .ciclo:	
+    63 0000005C AC                      	lodsb
+    64 0000005D 66AB                    	stosw
+    65 0000005F E2FB                    	loop .ciclo
+    66                                  	
+    67 00000061 1F                      	pop ds
+    68 00000062 07                      	pop es
+    69 00000063 61                      	popa
+    70 00000064 C3                      	ret

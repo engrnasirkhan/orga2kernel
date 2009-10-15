@@ -1,0 +1,679 @@
+     1                                  BITS 16
+     2                                  
+     3                                  
+     4                                  global start, call_gate_proc
+     5                                  	
+     6                                  extern GDT_DESC
+     7                                  extern IDT_DESC
+     8                                  extern idtFill
+     9                                  
+    10                                  %include "macrosmodoreal.mac"
+    11                              <1> ;
+    12                              <1> ;	IMPRIMI_TEXTO_MODO_REAL
+    13                              <1> ;
+    14                              <1> ;	Imprime un string en la seccion especificada de la memoria de Video.
+    15                              <1> ;	Solo funciona en modo Real.
+    16                              <1> ;
+    17                              <1> ;	Parámetros:
+    18                              <1> ;			%1		Mensaje
+    19                              <1> ;			%2		Longitud
+    20                              <1> ; 			%3		Color
+    21                              <1> ; 			%4		FILA Si es 0xFFFF, no aumento lineas
+    22                              <1> ; 			%5		COLUMNA
+    23                              <1> ; 
+    24                              <1> ;
+    25                              <1> %ifndef __MACROS_REAL__
+    26                              <1> %define __MACROS_REAL__
+    27                              <1> 
+    28 00000000 E90200              <1> jmp	noejecutoesto
+    29 00000003 0000                <1> contadorlineas:	dw 0x0000
+    30                              <1> noejecutoesto:
+    31                              <1> 
+    32                              <1> %macro IMPRIMIR_MODO_REAL 5
+    33                              <1> 	pusha
+    34                              <1> 	push 	es
+    35                              <1> 	mov		ax, 0xB800			;segmento de video
+    36                              <1> 	mov		es, ax
+    37                              <1> 	%if %1 <> dx
+    38                              <1> 	mov		dx, %4
+    39                              <1> 	%endif
+    40                              <1> 	cmp 	dx, 0xFFFF
+    41                              <1> 	je		%%sigo
+    42                              <1> 	add		WORD [contadorlineas], 0x0001
+    43                              <1> 	%%sigo:
+    44                              <1> 	mov		ax, [contadorlineas]
+    45                              <1> 	mov		bx, 80
+    46                              <1> 	mul		bx
+    47                              <1> 	mov		bx, ax                                                                                                  
+    48                              <1> 	
+    49                              <1> 	%if %1 <> dx
+    50                              <1> 	mov 	dx, %5	;offset
+    51                              <1> 	%endif
+    52                              <1> 	
+    53                              <1> 	add		bx, dx
+    54                              <1> 	shl		bx, 1
+    55                              <1> 	;xchg	bx, bx ; bochs debugger
+    56                              <1> 	%if %1 <> di
+    57                              <1> 	mov 	di, %1			;di = puntero al mensaje
+    58                              <1> 	%endif
+    59                              <1> 	%if %2 <> cx
+    60                              <1> 	mov 	cx, %2		;cx = contador (longitud del mensaje)
+    61                              <1> 	%endif
+    62                              <1> 	%if %3 <> ah
+    63                              <1> 	mov 	ah, %3			;ah = color. 0x1A azul de fondo, verde brillante para el caracter
+    64                              <1> 	%endif
+    65                              <1> 		%%ciclo_cadena:
+    66                              <1> 		mov 	al, [di]			;al = caracter.
+    67                              <1> 		mov 	[es:bx], ax			;escribo en pantalla
+    68                              <1> 		add 	bx, 2				
+    69                              <1> 		inc 	di
+    70                              <1> 		loop 	%%ciclo_cadena
+    71                              <1> 	
+    72                              <1> 	pop		es
+    73                              <1> 	popa
+    74                              <1> %endmacro
+    75                              <1> 
+    76                              <1> 
+    77                              <1> %endif
+    78                                  
+    79                                  
+    80                                  ;Aca arranca todo, en el primer byte.
+    81                                  start:
+    82 00000005 FA                      		cli			;no me interrumpan por ahora
+    83                                  		;xchg	bx, bx
+    84 00000006 E92800                  		jmp 	bienvenida 
+    85                                  
+    86                                  ;aca ponemos todos los mensajes		
+    87 00000009 496E696369616E646F-     iniciando: db 'Iniciando el kernel mas inutil del mundo'
+    88 00000012 20656C206B65726E65-
+    89 0000001B 6C206D617320696E75-
+    90 00000024 74696C2064656C206D-
+    91 0000002D 756E646F           
+    92                                  iniciando_len equ $ - iniciando		
+    93                                  
+    94                                  
+    95                                  bienvenida:
+    96                                  
+    97                                  ;; 		IMPRIMIR_MODO_REAL iniciando, iniciando_len, 0x07, 0, 0
+    98 00000031 E80B01                  		call	disable_A20
+    99 00000034 87DB                    		xchg	bx, bx
+   100 00000036 E86C02                  		call	check_A20
+   101 00000039 87DB                    		xchg	bx, bx
+   102 0000003B E8AD01                  		call 	enable_A20
+   103 0000003E 87DB                    		xchg	bx, bx
+   104 00000040 E86202                  		call	check_A20
+   105 00000043 87DB                    		xchg 	bx, bx
+   106                                  
+   107                                  		;deshabilitamos las interrupciones
+   108 00000045 FA                      		cli
+   109                                  		
+   110                                  		;cargamos la gdt
+   111 00000046 0F0116[0000]            		lgdt 	[GDT_DESC]
+   112                                  		
+   113                                  		;seteamos el bit PE del registro cr0
+   114 0000004B 0F20C0                  		mov 	eax, cr0
+   115 0000004E 660D01000000            		or  	eax, 01h
+   116 00000054 0F22C0                  		mov 	cr0, eax
+   117                                  		
+   118                                  		;segundo segmento en la GDT, el primero es nulo
+   119 00000057 EA[5C00]0800            		jmp 	0x08:modo_protegido
+   120                                  
+   121                                  BITS 32
+   122                                  modo_protegido:
+   123                                  
+   124 0000005C 66B81000                		mov 	ax, 0x10
+   125 00000060 8ED8                    		mov 	ds, ax		;acomodo el segmento de datos antes de hacer lio
+   126 00000062 8EC0                    		mov 	es, ax		;acomodo el segmento de datos antes de hacer lio
+   127 00000064 8EE0                    		mov 	fs, ax		;acomodo el segmento de datos antes de hacer lio
+   128 00000066 8EE8                    		mov 	gs, ax		;acomodo el segmento de datos antes de hacer lio
+   129 00000068 8ED0                    		mov	ss, ax		;acomodo el segmento de pila antes de usarla
+   130                                  		
+   131 0000006A E8(00000000)            		call	idtFill
+   132                                  		
+   133 0000006F 0F011D[00000000]        		lidt	[IDT_DESC]
+   134                                  	
+   135 00000076 66B82000                		mov 	ax, 0x20
+   136                                  ;;  		mov 	ax, 0x0	;Segmento de datos con base 0xB8000. 0x18: limite en 0xF
+   137 0000007A 8EC0                    		mov 	es, ax
+   138                                  
+   139                                  ;; 		mov ax,0x28
+   140                                  ;; 		mov es, ax
+   141 0000007C EA000000002800          		jmp 0x28:0x00
+   142                                  	
+   143 00000083 B9A00F0000              		mov 	ecx, (25 * 80) << 1
+   144 00000088 66B80010                		mov 	ax, 0x1000
+   145 0000008C 31FF                    		xor 	edi, edi
+   146                                  
+   147 0000008E 6687DB                  		xchg bx,bx
+   148                                  	
+   149 00000091 26893F                  		mov [es:edi], edi
+   150                                  
+   151                                  		.cicloazul:
+   152                                  			;xchg bx, bx
+   153 00000094 66AB                     			stosw
+   154 00000096 E2FC                    			loop 	.cicloazul
+   155 00000098 B939000000              			mov 	ecx, mensaje_len
+   156 0000009D BF5A060000              		mov 	edi, ((10 * 80) + 13) << 1
+   157                                  		
+   158 000000A2 B41A                    		mov 	ah, 0x1A
+   159 000000A4 BE[B3000000]            		mov 	esi, mensaje
+   160                                  		
+   161                                  		.ciclo:
+   162 000000A9 AC                      			lodsb
+   163 000000AA 66AB                    			stosw
+   164 000000AC E2FB                    			loop .ciclo
+   165                                  			
+   166                                  		
+   167 000000AE E9FBFFFFFF              		jmp 	$
+   168                                  		
+   169 000000B3 4D69207669656A6120-     mensaje:	db 'Mi vieja mula ya no es lo que era! (ahora protegidos :) )'
+   170 000000BC 6D756C61207961206E-
+   171 000000C5 6F206573206C6F2071-
+   172 000000CE 756520657261212028-
+   173 000000D7 61686F72612070726F-
+   174 000000E0 74656769646F73203A-
+   175 000000E9 292029             
+   176                                  mensaje_len equ $ - mensaje
+   177                                  
+   178                                  call_gate_proc:
+   179 000000EC E9FBFFFFFF              	jmp $
+   180                                  
+   181                                  %include "a20.asm"
+   182                              <1> BITS 16
+   183                              <1> %include "macrosmodoreal.mac"
+   184                              <2> ;
+   185                              <2> ;	IMPRIMI_TEXTO_MODO_REAL
+   186                              <2> ;
+   187                              <2> ;	Imprime un string en la seccion especificada de la memoria de Video.
+   188                              <2> ;	Solo funciona en modo Real.
+   189                              <2> ;
+   190                              <2> ;	Parámetros:
+   191                              <2> ;			%1		Mensaje
+   192                              <2> ;			%2		Longitud
+   193                              <2> ; 			%3		Color
+   194                              <2> ; 			%4		FILA Si es 0xFFFF, no aumento lineas
+   195                              <2> ; 			%5		COLUMNA
+   196                              <2> ; 
+   197                              <2> ;
+   198                              <2> %ifndef __MACROS_REAL__
+   199                              <2> %define __MACROS_REAL__
+   200                              <2> 
+   201                              <2> jmp	noejecutoesto
+   202                              <2> contadorlineas:	dw 0x0000
+   203                              <2> noejecutoesto:
+   204                              <2> 
+   205                              <2> %macro IMPRIMIR_MODO_REAL 5
+   206                              <2> 	pusha
+   207                              <2> 	push 	es
+   208                              <2> 	mov		ax, 0xB800			;segmento de video
+   209                              <2> 	mov		es, ax
+   210                              <2> 	%if %1 <> dx
+   211                              <2> 	mov		dx, %4
+   212                              <2> 	%endif
+   213                              <2> 	cmp 	dx, 0xFFFF
+   214                              <2> 	je		%%sigo
+   215                              <2> 	add		WORD [contadorlineas], 0x0001
+   216                              <2> 	%%sigo:
+   217                              <2> 	mov		ax, [contadorlineas]
+   218                              <2> 	mov		bx, 80
+   219                              <2> 	mul		bx
+   220                              <2> 	mov		bx, ax                                                                                                  
+   221                              <2> 	
+   222                              <2> 	%if %1 <> dx
+   223                              <2> 	mov 	dx, %5	;offset
+   224                              <2> 	%endif
+   225                              <2> 	
+   226                              <2> 	add		bx, dx
+   227                              <2> 	shl		bx, 1
+   228                              <2> 	;xchg	bx, bx ; bochs debugger
+   229                              <2> 	%if %1 <> di
+   230                              <2> 	mov 	di, %1			;di = puntero al mensaje
+   231                              <2> 	%endif
+   232                              <2> 	%if %2 <> cx
+   233                              <2> 	mov 	cx, %2		;cx = contador (longitud del mensaje)
+   234                              <2> 	%endif
+   235                              <2> 	%if %3 <> ah
+   236                              <2> 	mov 	ah, %3			;ah = color. 0x1A azul de fondo, verde brillante para el caracter
+   237                              <2> 	%endif
+   238                              <2> 		%%ciclo_cadena:
+   239                              <2> 		mov 	al, [di]			;al = caracter.
+   240                              <2> 		mov 	[es:bx], ax			;escribo en pantalla
+   241                              <2> 		add 	bx, 2				
+   242                              <2> 		inc 	di
+   243                              <2> 		loop 	%%ciclo_cadena
+   244                              <2> 	
+   245                              <2> 	pop		es
+   246                              <2> 	popa
+   247                              <2> %endmacro
+   248                              <2> 
+   249                              <2> 
+   250                              <2> %endif
+   251                              <1> 
+   252                              <1> section .text
+   253                              <1> 
+   254 000000F1 486162696C6974616E- <1> habilitando: db 'Habilitando A20........'
+   255 000000FA 646F204132302E2E2E- <1>
+   256 00000103 2E2E2E2E2E          <1>
+   257                              <1> habilitando_len equ $ - habilitando
+   258                              <1> 
+   259 00000108 4465736162696C6974- <1> deshabilitando: db 'Desabilitando A20......'
+   260 00000111 616E646F204132302E- <1>
+   261 0000011A 2E2E2E2E2E          <1>
+   262                              <1> deshabilitando_len equ $ - deshabilitando
+   263                              <1> 
+   264 0000011F 436865636B65616E64- <1> checkeando: db 'Checkeando A20.........'
+   265 00000128 6F204132302E2E2E2E- <1>
+   266 00000131 2E2E2E2E2E          <1>
+   267                              <1> checkeando_len equ $ - checkeando
+   268                              <1> 
+   269 00000136 4F4B21              <1> mensajeOK: db 'OK!'
+   270                              <1> mensajeOK_len equ $ - mensajeOK
+   271                              <1> 
+   272 00000139 46414C4C4F21        <1> mensajeFAIL: db 'FALLO!'
+   273                              <1> mensajeFAIL_len equ $ - mensajeFAIL
+   274                              <1> 
+   275                              <1> disable_A20:
+   276 0000013F 9C                  <1> 		pushf
+   277 00000140 60                  <1> 		pusha
+   278                              <1> 		IMPRIMIR_MODO_REAL deshabilitando, deshabilitando_len, 0x07, 0, 0
+   279 00000141 60                  <2>  pusha
+   280 00000142 06                  <2>  push es
+   281 00000143 B800B8              <2>  mov ax, 0xB800
+   282 00000146 8EC0                <2>  mov es, ax
+   283                              <2>  %if %1 <> dx
+   284 00000148 BA0000              <2>  mov dx, %4
+   285                              <2>  %endif
+   286 0000014B 81FAFFFF            <2>  cmp dx, 0xFFFF
+   287 0000014F 7406                <2>  je %%sigo
+   288 00000151 8106[0300]0100      <2>  add WORD [contadorlineas], 0x0001
+   289                              <2>  %%sigo:
+   290 00000157 A1[0300]            <2>  mov ax, [contadorlineas]
+   291 0000015A BB5000              <2>  mov bx, 80
+   292 0000015D F7E3                <2>  mul bx
+   293 0000015F 89C3                <2>  mov bx, ax
+   294                              <2> 
+   295                              <2>  %if %1 <> dx
+   296 00000161 BA0000              <2>  mov dx, %5
+   297                              <2>  %endif
+   298                              <2> 
+   299 00000164 01D3                <2>  add bx, dx
+   300 00000166 D1E3                <2>  shl bx, 1
+   301                              <2> 
+   302                              <2>  %if %1 <> di
+   303 00000168 BF[0801]            <2>  mov di, %1
+   304                              <2>  %endif
+   305                              <2>  %if %2 <> cx
+   306 0000016B B91700              <2>  mov cx, %2
+   307                              <2>  %endif
+   308                              <2>  %if %3 <> ah
+   309 0000016E B407                <2>  mov ah, %3
+   310                              <2>  %endif
+   311                              <2>  %%ciclo_cadena:
+   312 00000170 8A05                <2>  mov al, [di]
+   313 00000172 268907              <2>  mov [es:bx], ax
+   314 00000175 81C30200            <2>  add bx, 2
+   315 00000179 47                  <2>  inc di
+   316 0000017A E2F4                <2>  loop %%ciclo_cadena
+   317                              <2> 
+   318 0000017C 07                  <2>  pop es
+   319 0000017D 61                  <2>  popa
+   320 0000017E E81601              <1>         call    a20wait
+   321 00000181 B0AD                <1>         mov     al,0xAD
+   322 00000183 E664                <1>         out     0x64,al
+   323 00000185 E80F01              <1>         call    a20wait
+   324 00000188 B0D0                <1>         mov     al,0xD0
+   325 0000018A E664                <1>         out     0x64,al
+   326 0000018C E80F01              <1>         call    a20wait2
+   327 0000018F E460                <1>         in      al,0x60
+   328 00000191 50                  <1>         push    ax
+   329 00000192 E80201              <1>         call    a20wait
+   330 00000195 B0D1                <1>         mov     al,0xD1
+   331 00000197 E664                <1>         out     0x64,al
+   332 00000199 E8FB00              <1>         call    a20wait
+   333 0000019C 58                  <1>         pop     ax
+   334 0000019D 24FD                <1>         and     al,0xFD		;deshabilito
+   335 0000019F E660                <1>         out     0x60,al
+   336 000001A1 E8F300              <1>         call    a20wait
+   337 000001A4 B0AE                <1>         mov     al,0xAE
+   338 000001A6 E664                <1>         out     0x64,al
+   339 000001A8 E8EC00              <1>         call    a20wait
+   340                              <1>         IMPRIMIR_MODO_REAL mensajeOK, mensajeOK_len, 0x0A, 0xFFFF, 23
+   341 000001AB 60                  <2>  pusha
+   342 000001AC 06                  <2>  push es
+   343 000001AD B800B8              <2>  mov ax, 0xB800
+   344 000001B0 8EC0                <2>  mov es, ax
+   345                              <2>  %if %1 <> dx
+   346 000001B2 BAFFFF              <2>  mov dx, %4
+   347                              <2>  %endif
+   348 000001B5 81FAFFFF            <2>  cmp dx, 0xFFFF
+   349 000001B9 7406                <2>  je %%sigo
+   350 000001BB 8106[0300]0100      <2>  add WORD [contadorlineas], 0x0001
+   351                              <2>  %%sigo:
+   352 000001C1 A1[0300]            <2>  mov ax, [contadorlineas]
+   353 000001C4 BB5000              <2>  mov bx, 80
+   354 000001C7 F7E3                <2>  mul bx
+   355 000001C9 89C3                <2>  mov bx, ax
+   356                              <2> 
+   357                              <2>  %if %1 <> dx
+   358 000001CB BA1700              <2>  mov dx, %5
+   359                              <2>  %endif
+   360                              <2> 
+   361 000001CE 01D3                <2>  add bx, dx
+   362 000001D0 D1E3                <2>  shl bx, 1
+   363                              <2> 
+   364                              <2>  %if %1 <> di
+   365 000001D2 BF[3601]            <2>  mov di, %1
+   366                              <2>  %endif
+   367                              <2>  %if %2 <> cx
+   368 000001D5 B90300              <2>  mov cx, %2
+   369                              <2>  %endif
+   370                              <2>  %if %3 <> ah
+   371 000001D8 B40A                <2>  mov ah, %3
+   372                              <2>  %endif
+   373                              <2>  %%ciclo_cadena:
+   374 000001DA 8A05                <2>  mov al, [di]
+   375 000001DC 268907              <2>  mov [es:bx], ax
+   376 000001DF 81C30200            <2>  add bx, 2
+   377 000001E3 47                  <2>  inc di
+   378 000001E4 E2F4                <2>  loop %%ciclo_cadena
+   379                              <2> 
+   380 000001E6 07                  <2>  pop es
+   381 000001E7 61                  <2>  popa
+   382 000001E8 61                  <1> 		popa
+   383 000001E9 9D                  <1> 		popf
+   384 000001EA C3                  <1> 		ret
+   385                              <1> 
+   386                              <1> 
+   387                              <1> enable_A20:
+   388 000001EB 9C                  <1> 		pushf
+   389 000001EC 60                  <1> 		pusha
+   390                              <1> 		IMPRIMIR_MODO_REAL habilitando, habilitando_len, 0x07, 0, 0
+   391 000001ED 60                  <2>  pusha
+   392 000001EE 06                  <2>  push es
+   393 000001EF B800B8              <2>  mov ax, 0xB800
+   394 000001F2 8EC0                <2>  mov es, ax
+   395                              <2>  %if %1 <> dx
+   396 000001F4 BA0000              <2>  mov dx, %4
+   397                              <2>  %endif
+   398 000001F7 81FAFFFF            <2>  cmp dx, 0xFFFF
+   399 000001FB 7406                <2>  je %%sigo
+   400 000001FD 8106[0300]0100      <2>  add WORD [contadorlineas], 0x0001
+   401                              <2>  %%sigo:
+   402 00000203 A1[0300]            <2>  mov ax, [contadorlineas]
+   403 00000206 BB5000              <2>  mov bx, 80
+   404 00000209 F7E3                <2>  mul bx
+   405 0000020B 89C3                <2>  mov bx, ax
+   406                              <2> 
+   407                              <2>  %if %1 <> dx
+   408 0000020D BA0000              <2>  mov dx, %5
+   409                              <2>  %endif
+   410                              <2> 
+   411 00000210 01D3                <2>  add bx, dx
+   412 00000212 D1E3                <2>  shl bx, 1
+   413                              <2> 
+   414                              <2>  %if %1 <> di
+   415 00000214 BF[F100]            <2>  mov di, %1
+   416                              <2>  %endif
+   417                              <2>  %if %2 <> cx
+   418 00000217 B91700              <2>  mov cx, %2
+   419                              <2>  %endif
+   420                              <2>  %if %3 <> ah
+   421 0000021A B407                <2>  mov ah, %3
+   422                              <2>  %endif
+   423                              <2>  %%ciclo_cadena:
+   424 0000021C 8A05                <2>  mov al, [di]
+   425 0000021E 268907              <2>  mov [es:bx], ax
+   426 00000221 81C30200            <2>  add bx, 2
+   427 00000225 47                  <2>  inc di
+   428 00000226 E2F4                <2>  loop %%ciclo_cadena
+   429                              <2> 
+   430 00000228 07                  <2>  pop es
+   431 00000229 61                  <2>  popa
+   432 0000022A E86A00              <1>         call    a20wait
+   433 0000022D B0AD                <1>         mov     al,0xAD
+   434 0000022F E664                <1>         out     0x64,al
+   435 00000231 E86300              <1>         call    a20wait
+   436 00000234 B0D0                <1>         mov     al,0xD0
+   437 00000236 E664                <1>         out     0x64,al
+   438 00000238 E86300              <1>         call    a20wait2
+   439 0000023B E460                <1>         in      al,0x60
+   440 0000023D 50                  <1>         push    ax
+   441 0000023E E85600              <1>         call    a20wait
+   442 00000241 B0D1                <1>         mov     al,0xD1
+   443 00000243 E664                <1>         out     0x64,al
+   444 00000245 E84F00              <1>         call    a20wait
+   445 00000248 58                  <1>         pop     ax
+   446 00000249 0C02                <1>         or      al,2
+   447 0000024B E660                <1>         out     0x60,al
+   448 0000024D E84700              <1>         call    a20wait
+   449 00000250 B0AE                <1>         mov     al,0xAE
+   450 00000252 E664                <1>         out     0x64,al
+   451 00000254 E84000              <1>         call    a20wait
+   452                              <1>         IMPRIMIR_MODO_REAL mensajeOK, mensajeOK_len, 0x0A, 0xFFFF, 23
+   453 00000257 60                  <2>  pusha
+   454 00000258 06                  <2>  push es
+   455 00000259 B800B8              <2>  mov ax, 0xB800
+   456 0000025C 8EC0                <2>  mov es, ax
+   457                              <2>  %if %1 <> dx
+   458 0000025E BAFFFF              <2>  mov dx, %4
+   459                              <2>  %endif
+   460 00000261 81FAFFFF            <2>  cmp dx, 0xFFFF
+   461 00000265 7406                <2>  je %%sigo
+   462 00000267 8106[0300]0100      <2>  add WORD [contadorlineas], 0x0001
+   463                              <2>  %%sigo:
+   464 0000026D A1[0300]            <2>  mov ax, [contadorlineas]
+   465 00000270 BB5000              <2>  mov bx, 80
+   466 00000273 F7E3                <2>  mul bx
+   467 00000275 89C3                <2>  mov bx, ax
+   468                              <2> 
+   469                              <2>  %if %1 <> dx
+   470 00000277 BA1700              <2>  mov dx, %5
+   471                              <2>  %endif
+   472                              <2> 
+   473 0000027A 01D3                <2>  add bx, dx
+   474 0000027C D1E3                <2>  shl bx, 1
+   475                              <2> 
+   476                              <2>  %if %1 <> di
+   477 0000027E BF[3601]            <2>  mov di, %1
+   478                              <2>  %endif
+   479                              <2>  %if %2 <> cx
+   480 00000281 B90300              <2>  mov cx, %2
+   481                              <2>  %endif
+   482                              <2>  %if %3 <> ah
+   483 00000284 B40A                <2>  mov ah, %3
+   484                              <2>  %endif
+   485                              <2>  %%ciclo_cadena:
+   486 00000286 8A05                <2>  mov al, [di]
+   487 00000288 268907              <2>  mov [es:bx], ax
+   488 0000028B 81C30200            <2>  add bx, 2
+   489 0000028F 47                  <2>  inc di
+   490 00000290 E2F4                <2>  loop %%ciclo_cadena
+   491                              <2> 
+   492 00000292 07                  <2>  pop es
+   493 00000293 61                  <2>  popa
+   494 00000294 61                  <1> 		popa
+   495 00000295 9D                  <1> 		popf
+   496 00000296 C3                  <1> 		ret
+   497                              <1>  
+   498                              <1> a20wait:
+   499 00000297 E464                <1>         in      al,0x64
+   500 00000299 A802                <1>         test    al,2
+   501 0000029B 75FA                <1>         jnz     a20wait
+   502 0000029D C3                  <1>         ret
+   503                              <1>  
+   504                              <1> a20wait2:
+   505 0000029E E464                <1>         in      al,0x64
+   506 000002A0 A801                <1>         test    al,1
+   507 000002A2 74FA                <1>         jz      a20wait2
+   508 000002A4 C3                  <1>         ret
+   509                              <1> 
+   510                              <1> check_A20:
+   511 000002A5 9C                  <1> 	    pushf
+   512 000002A6 0FA0                <1> 	    push 	fs
+   513 000002A8 0FA8                <1> 	    push 	gs
+   514 000002AA 57                  <1> 	    push 	di
+   515 000002AB 56                  <1> 	    push 	si
+   516                              <1> 		IMPRIMIR_MODO_REAL checkeando, checkeando_len, 0x07, 0, 0
+   517 000002AC 60                  <2>  pusha
+   518 000002AD 06                  <2>  push es
+   519 000002AE B800B8              <2>  mov ax, 0xB800
+   520 000002B1 8EC0                <2>  mov es, ax
+   521                              <2>  %if %1 <> dx
+   522 000002B3 BA0000              <2>  mov dx, %4
+   523                              <2>  %endif
+   524 000002B6 81FAFFFF            <2>  cmp dx, 0xFFFF
+   525 000002BA 7406                <2>  je %%sigo
+   526 000002BC 8106[0300]0100      <2>  add WORD [contadorlineas], 0x0001
+   527                              <2>  %%sigo:
+   528 000002C2 A1[0300]            <2>  mov ax, [contadorlineas]
+   529 000002C5 BB5000              <2>  mov bx, 80
+   530 000002C8 F7E3                <2>  mul bx
+   531 000002CA 89C3                <2>  mov bx, ax
+   532                              <2> 
+   533                              <2>  %if %1 <> dx
+   534 000002CC BA0000              <2>  mov dx, %5
+   535                              <2>  %endif
+   536                              <2> 
+   537 000002CF 01D3                <2>  add bx, dx
+   538 000002D1 D1E3                <2>  shl bx, 1
+   539                              <2> 
+   540                              <2>  %if %1 <> di
+   541 000002D3 BF[1F01]            <2>  mov di, %1
+   542                              <2>  %endif
+   543                              <2>  %if %2 <> cx
+   544 000002D6 B91700              <2>  mov cx, %2
+   545                              <2>  %endif
+   546                              <2>  %if %3 <> ah
+   547 000002D9 B407                <2>  mov ah, %3
+   548                              <2>  %endif
+   549                              <2>  %%ciclo_cadena:
+   550 000002DB 8A05                <2>  mov al, [di]
+   551 000002DD 268907              <2>  mov [es:bx], ax
+   552 000002E0 81C30200            <2>  add bx, 2
+   553 000002E4 47                  <2>  inc di
+   554 000002E5 E2F4                <2>  loop %%ciclo_cadena
+   555                              <2> 
+   556 000002E7 07                  <2>  pop es
+   557 000002E8 61                  <2>  popa
+   558 000002E9 31C0                <1> 	    xor 	ax, ax ; ax = 0
+   559 000002EB 8EE0                <1>     	mov 	fs, ax
+   560 000002ED F7D0                <1> 	    not 	ax ; ax = 0xFFFF
+   561 000002EF 8EE8                <1> 	    mov 	gs, ax
+   562 000002F1 BF0005              <1> 	    mov 	di, 0x0500
+   563 000002F4 BE1005              <1> 	    mov 	si, 0x0510
+   564 000002F7 648A05              <1> 	    mov 	al, byte [fs:di]
+   565 000002FA 50                  <1> 	    push 	ax
+   566 000002FB 658A04              <1> 	    mov 	al, byte [gs:si]
+   567 000002FE 50                  <1> 	    push	ax
+   568 000002FF 64C60500            <1> 	    mov 	byte [fs:di], 0x00
+   569 00000303 65C604FF            <1>     	mov 	byte [gs:si], 0xFF
+   570 00000307 64803DFF            <1> 	    cmp 	byte [fs:di], 0xFF
+   571 0000030B 7440                <1> 	 	je 		.falla
+   572                              <1> 		IMPRIMIR_MODO_REAL mensajeOK, mensajeOK_len, 0x0A, 0xFFFF, 23
+   573 0000030D 60                  <2>  pusha
+   574 0000030E 06                  <2>  push es
+   575 0000030F B800B8              <2>  mov ax, 0xB800
+   576 00000312 8EC0                <2>  mov es, ax
+   577                              <2>  %if %1 <> dx
+   578 00000314 BAFFFF              <2>  mov dx, %4
+   579                              <2>  %endif
+   580 00000317 81FAFFFF            <2>  cmp dx, 0xFFFF
+   581 0000031B 7406                <2>  je %%sigo
+   582 0000031D 8106[0300]0100      <2>  add WORD [contadorlineas], 0x0001
+   583                              <2>  %%sigo:
+   584 00000323 A1[0300]            <2>  mov ax, [contadorlineas]
+   585 00000326 BB5000              <2>  mov bx, 80
+   586 00000329 F7E3                <2>  mul bx
+   587 0000032B 89C3                <2>  mov bx, ax
+   588                              <2> 
+   589                              <2>  %if %1 <> dx
+   590 0000032D BA1700              <2>  mov dx, %5
+   591                              <2>  %endif
+   592                              <2> 
+   593 00000330 01D3                <2>  add bx, dx
+   594 00000332 D1E3                <2>  shl bx, 1
+   595                              <2> 
+   596                              <2>  %if %1 <> di
+   597 00000334 BF[3601]            <2>  mov di, %1
+   598                              <2>  %endif
+   599                              <2>  %if %2 <> cx
+   600 00000337 B90300              <2>  mov cx, %2
+   601                              <2>  %endif
+   602                              <2>  %if %3 <> ah
+   603 0000033A B40A                <2>  mov ah, %3
+   604                              <2>  %endif
+   605                              <2>  %%ciclo_cadena:
+   606 0000033C 8A05                <2>  mov al, [di]
+   607 0000033E 268907              <2>  mov [es:bx], ax
+   608 00000341 81C30200            <2>  add bx, 2
+   609 00000345 47                  <2>  inc di
+   610 00000346 E2F4                <2>  loop %%ciclo_cadena
+   611                              <2> 
+   612 00000348 07                  <2>  pop es
+   613 00000349 61                  <2>  popa
+   614 0000034A E93D00              <1> 		jmp .sigue
+   615                              <1> 		.falla:
+   616                              <1> 			IMPRIMIR_MODO_REAL mensajeFAIL, mensajeFAIL_len, 0x0C, 0xFFFF, 23
+   617 0000034D 60                  <2>  pusha
+   618 0000034E 06                  <2>  push es
+   619 0000034F B800B8              <2>  mov ax, 0xB800
+   620 00000352 8EC0                <2>  mov es, ax
+   621                              <2>  %if %1 <> dx
+   622 00000354 BAFFFF              <2>  mov dx, %4
+   623                              <2>  %endif
+   624 00000357 81FAFFFF            <2>  cmp dx, 0xFFFF
+   625 0000035B 7406                <2>  je %%sigo
+   626 0000035D 8106[0300]0100      <2>  add WORD [contadorlineas], 0x0001
+   627                              <2>  %%sigo:
+   628 00000363 A1[0300]            <2>  mov ax, [contadorlineas]
+   629 00000366 BB5000              <2>  mov bx, 80
+   630 00000369 F7E3                <2>  mul bx
+   631 0000036B 89C3                <2>  mov bx, ax
+   632                              <2> 
+   633                              <2>  %if %1 <> dx
+   634 0000036D BA1700              <2>  mov dx, %5
+   635                              <2>  %endif
+   636                              <2> 
+   637 00000370 01D3                <2>  add bx, dx
+   638 00000372 D1E3                <2>  shl bx, 1
+   639                              <2> 
+   640                              <2>  %if %1 <> di
+   641 00000374 BF[3901]            <2>  mov di, %1
+   642                              <2>  %endif
+   643                              <2>  %if %2 <> cx
+   644 00000377 B90600              <2>  mov cx, %2
+   645                              <2>  %endif
+   646                              <2>  %if %3 <> ah
+   647 0000037A B40C                <2>  mov ah, %3
+   648                              <2>  %endif
+   649                              <2>  %%ciclo_cadena:
+   650 0000037C 8A05                <2>  mov al, [di]
+   651 0000037E 268907              <2>  mov [es:bx], ax
+   652 00000381 81C30200            <2>  add bx, 2
+   653 00000385 47                  <2>  inc di
+   654 00000386 E2F4                <2>  loop %%ciclo_cadena
+   655                              <2> 
+   656 00000388 07                  <2>  pop es
+   657 00000389 61                  <2>  popa
+   658                              <1> 		.sigue:
+   659 0000038A 58                  <1> 	    pop 	ax
+   660 0000038B 658804              <1>     	mov 	byte [gs:si], al
+   661 0000038E 58                  <1> 	    pop 	ax
+   662 0000038F 648805              <1> 	    mov 	byte [fs:di], al
+   663 00000392 B80000              <1> 	    mov 	ax, 0
+   664 00000395 7403                <1> 	    je 		check_a20__exit
+   665 00000397 B80100              <1> 	    mov 	ax, 1
+   666                              <1> 
+   667                              <1> check_a20__exit:
+   668 0000039A 5E                  <1> 	    pop 	si
+   669 0000039B 5F                  <1> 	    pop 	di
+   670 0000039C 0FA9                <1> 	    pop 	gs
+   671 0000039E 0FA1                <1> 	    pop 	fs
+   672 000003A0 9D                  <1> 	    popf
+   673 000003A1 C3                  <1> 		ret
+   674                              <1> 
+   675                              <1> 
+   676                                  
+   677                                  
+   678                                  
+   679                                  
