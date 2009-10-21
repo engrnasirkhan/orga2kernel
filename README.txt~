@@ -1,5 +1,0 @@
-Cuando se linkea el kernel 
-idt.o necesita estar primero 
-asi resulve bien la ubicacion de  las 
-rutinas isr[i] la idt
-sino la idt queda con direcciones incorrectas

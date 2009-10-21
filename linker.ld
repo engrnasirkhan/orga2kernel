@@ -1,25 +1,25 @@
-ENTRY (loader)
+ENTRY(loader)
 
-SECTIONS{
-	. = 0x00100000;
+PHDRS {
+	codigo PT_LOAD AT(0x100000);
+	datos PT_LOAD;
+}
+
+SECTIONS {
+	phys = 0x100000;
+	virt = 0x100000;
+	. = virt;
 	
-	.text :{
-	      *(.text)
-	}
+	.text virt : AT(phys) {
+	      *(.text .rodata .rdata)
+	} :codigo
 	
-	.rodata ALIGN (0x1000) : {
-		*(.rodata)
-	}
-	
-	.data ALIGN (0x1000) : {
+	.data ALIGN(0x1000) : {
 	      *(.data)
-	}
-	
-	.bss : {
-	     sbss = .;
-	     *(COMMON)
-	     *(.bss)
-	     ebss = .;
-	}
+	} :datos
 
+	.bss : {
+	     *(.bss)
+		  *(COMMON)
+	} :datos
 }

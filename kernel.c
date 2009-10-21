@@ -24,7 +24,6 @@ void kmain( multiboot_info_t* mbd, unsigned int magic)
       i = i+1;
     }
   print(mensaje); 
-  asm  ( "mov ax,%0 ; mov ss,ax"::"i"(0x0));  
   
   while (1);
 }

@@ -1,0 +1,29 @@
+FLAGS_C = -ffreestanding -nostdlib
+FLAGS_NASM = -f elf32
+FLAGS_AS = 
+FLAGS_LD = -T linker.ld --statis
+NASM = nasm
+
+#OBJS = a20.o gdt.o idt.o isr.o messages.o pagination.o print_protegido.o remap_pic.o gdt.o kernel.o loader.o
+OBJS = loader.o kernel.o gdt.o idt.o print_protegido.o
+
+.PHONY: all clean
+all: kernel.elf
+clean:
+	rm -f $(OBJS)
+
+kernel.elf: $(OBJS)
+	$(LD) $(FLAGS_LD) $(LDFLAGS) $(OBJS) -o $@
+	mcopy -oi diskette.img kernel.elf ::/BOOT
+
+%.o: %.s
+	$(AS) $(FLAGS_AS) $(ASFLAGS) $< -o $@
+
+%.o: %.S
+	$(AS) $(FLAGS_AS) $(ASFLAGS) $< -o $@
+
+%.o: %.c
+	$(CC) $(FLAGS_C) $(CFLAGS) -c $< -o $@
+
+%.o: %.asm
+	$(NASM) $(FLAGS_NASM) $< -o $@
