@@ -1,0 +1,12 @@
+include flags.mk
+
+# Obtenemos todos los fuentes
+AS_SRCS = $(wildcard *.S)
+C_SRCS = $(wildcard *.c)
+CXX_SRCS = $(wildcard *.cpp)
+OBJS = $(AS_SRCS:.S=.o) $(C_SRCS:.c=.o) $(CXX_SRCS:.cpp=.o)
+
+.PHONY: all clean
+all: $(OBJS)
+clean:
+	rm -f $(OBJS)
