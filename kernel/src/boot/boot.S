@@ -62,7 +62,7 @@ continuar:
 1:
 	movl %eax, (%edi)
 	addl $4, %edi
-	addl $4096, %eax
+	addl $4096*1024, %eax
 	loop 1b
 
 	# Rellenamos la segunda parte de la tabla.
@@ -71,7 +71,7 @@ continuar:
 2:
 	movl %eax, (%edi)
 	addl $4, %edi
-	addl $4096, %eax
+	addl $4096*1024, %eax
 	loop 2b
 	
 	# Activamos páginas de 4MB
