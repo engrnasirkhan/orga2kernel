@@ -4,8 +4,7 @@ FLAGS_AS = -32
 FLAGS_LD = --oformat elf32-i386 -m elf_i386 -T linker.ld --static
 NASM = nasm
 
-#OBJS = a20.o gdt.o idt.o isr.o messages.o pagination.o print_protegido.o remap_pic.o gdt.o kernel.o loader.o
-OBJS = idt.o loader.o kernel.o gdt.o print_protegido.o
+OBJS = idt.o loader.o kernel.o gdt.o screen/screen.o utils/utils.o
 
 .PHONY: all clean
 all: kernel.elf
@@ -15,6 +14,9 @@ clean:
 kernel.elf: $(OBJS)
 	$(LD) $(FLAGS_LD) $(LDFLAGS) $(OBJS) -o $@
 	mcopy -oi diskette.img kernel.elf ::/BOOT
+
+%.o: %.c
+	$(CC) $(FLAGS_C) $(CFLAGS) -c $< -o $@
 
 %.o: %.s
 	$(AS) $(FLAGS_AS) $(ASFLAGS) $< -o $@
@@ -27,3 +29,5 @@ kernel.elf: $(OBJS)
 
 %.o: %.asm
 	$(NASM) $(FLAGS_NASM) $< -o $@
+	
+

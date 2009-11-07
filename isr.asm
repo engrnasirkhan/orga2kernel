@@ -1,11 +1,11 @@
-extern print
+extern kprint
 	
 isr0:
 	pusha
 	
 	lea eax, [isr0_msg]
 	push eax
-	call print
+	call kprint
 	add esp, 4
 	
 	popa
@@ -16,7 +16,7 @@ isr1:
 	
 	lea eax, [isr1_msg]
 	push eax
-	call print
+	call kprint
 	add esp, 4
 	
 	popa
@@ -27,7 +27,7 @@ isr2:
 	
 	lea eax, [isr2_msg]
 	push eax
-	call print
+	call kprint
 	add esp, 4
 	
 	popa
@@ -38,7 +38,7 @@ isr3:
 	
 	lea eax, [isr3_msg]
 	push eax
-	call print
+	call kprint
 	add esp, 4
 	
 	popa
@@ -49,7 +49,7 @@ isr4:
 	
 	lea eax, [isr4_msg]
 	push eax
-	call print
+	call kprint
 	add esp, 4
 	
 	popa
@@ -60,7 +60,7 @@ isr5:
 	
 	lea eax, [isr5_msg]
 	push eax
-	call print
+	call kprint
 	add esp, 4
 	
 	popa
@@ -71,7 +71,7 @@ isr6:
 	
 	lea eax, [isr6_msg]
 	push eax
-	call print
+	call kprint
 	add esp, 4
 	
 	popa
@@ -83,7 +83,7 @@ isr7:
 	
 	lea eax, [isr7_msg]
 	push eax
-	call print
+	call kprint
 	add esp, 4
 	
 	popa
@@ -94,7 +94,7 @@ isr8:
 	
 	lea eax, [isr8_msg]
 	push eax
-	call print
+	call kprint
 	add esp, 4
 	
 	popa
@@ -105,7 +105,7 @@ isr9:
 	
 	lea eax, [isr9_msg]
 	push eax
-	call print
+	call kprint
 	add esp, 4
 	
 	popa
@@ -117,7 +117,7 @@ isr10:
 	
 	lea eax, [isr10_msg]
 	push eax
-	call print
+	call kprint
 	add esp, 4
 	
 	popa
@@ -129,7 +129,7 @@ isr11:
 	
 	lea eax, [isr11_msg]
 	push eax
-	call print
+	call kprint
 	add esp, 4
 	
 	popa
@@ -140,7 +140,7 @@ isr12:
 	
 	lea eax, [isr12_msg]
 	push eax
-	call print
+	call kprint
 	add esp, 4
 	
 	popa
@@ -152,7 +152,7 @@ isr13:
 	pusha
 	lea eax, [isr13_msg]
 	push eax
- 	call print
+ 	call kprint
 	add esp, 4
 	popa
 	iret
@@ -162,7 +162,7 @@ isr14:
 	
 	lea eax, [isr14_msg]
 	push eax
-	call print
+	call kprint
 	add esp, 4
 	
 	popa
@@ -174,7 +174,7 @@ isr15:
 	
 	lea eax, [isr15_msg]
 	push eax
-	call print
+	call kprint
 	add esp, 4
 	
 	popa
@@ -186,7 +186,7 @@ isr32:
 	
 	lea eax, [isr32_msg]
 	push eax
-	call print
+	call kprint
 	add esp, 4
 	
 	popa

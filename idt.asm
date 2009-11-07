@@ -1,5 +1,3 @@
-extern print
-	
 global IDT_DESC
 
 %define ORIGIN 0x100000
