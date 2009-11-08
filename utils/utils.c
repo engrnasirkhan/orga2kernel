@@ -2,11 +2,12 @@
 
 void uitoa(uint n, char* s, uint base)
 {
+    char digits[] = {'0','1','2','3','4','5','6','7','8','9','A','B','C','D','E','F'};
     int i;
 
     i = 0;
     do {       /* generate digits in reverse order */
-        s[i++] = n % base + '0';   /* get next digit */
+        s[i++] = digits[n%base];   /* get next digit */
     } while ((n /= base) > 0);     /* delete it */
     s[i--] = '\0';
     

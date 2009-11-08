@@ -23,13 +23,13 @@ STACKSIZE equ 0x4000
 loader:
 	mov esp, stack+STACKSIZE
 
-	lidt  [IDT_DESC]	
-	lgdt  [GDT_DESC]
+	;lidt  [IDT_DESC]	
+	;lgdt  [GDT_DESC]
 	
 	push eax
 	push ebx
 
-	call 0x8:kmain
+	call kmain
 
 	cli
 

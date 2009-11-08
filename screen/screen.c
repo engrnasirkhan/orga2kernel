@@ -35,42 +35,33 @@ int kprint(const char *format, ...)
         {
             c = *format++;
 
-            if(c=='d' || c=='i' || c=='x')
+            if(c=='d' || c=='i' || c=='u' || c=='x' || c=='o')
             {
                 int d = *((int*) arguments++);
                 //for 32-bit signed ints, 12 char's are enough (including \0) 
                 char buff[12];
                 
                 uint base;
-                if(c=='d' || c=='i')
+                if(c=='d' || c=='i' || c=='u')
                 {
                     base = 10;
+                }
+                else if(c=='o')
+                {
+                    base = 8;
                 }
                 else
                 {
                     base = 16;
                 }
                 
-                if(d<0)
+                if(d<0 && (c=='d' || c=='i' || c=='o'))
                 {
                     d = -d;
                     kputc('-');
                 }
                 
                 uitoa(d, buff, base);
-                int i=0;
-                while(buff[i] != '\0')
-                {
-                    kputc(buff[i++]);
-                    char_count++;
-                }
-            }
-            else if(c=='u')
-            {
-                uint d = *((int*) arguments++);
-                //for 32-bit signed ints, 12 char's are enough (including \0) 
-                char buff[12];
-                uitoa(d, buff, 10);
                 int i=0;
                 while(buff[i] != '\0')
                 {
