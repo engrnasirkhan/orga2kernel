@@ -7,6 +7,7 @@
 .equ virtual_start, 0x80000000
 
 .extern __kernel_end
+.extern kmain
 
 .section .init.text,"ax",@progbits
 .section .init.rodata,"a",@progbits
@@ -95,6 +96,8 @@ continuar:
 	movl $paginacion_activada, %esi
 	movl linea, %edi
 	call early_print
+
+	jmp kmain
 
 	cli
 4:

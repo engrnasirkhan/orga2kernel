@@ -1,6 +1,4 @@
-#include "utils.h"
-
-void uitoa(uint n, char* s, uint base)
+void uitoa(unsigned int n, char* s, unsigned int base)
 {
     char digits[] = {'0','1','2','3','4','5','6','7','8','9','A','B','C','D','E','F'};
     int i;
@@ -23,4 +21,3 @@ void uitoa(uint n, char* s, uint base)
         i--;    
     }
 } 
-

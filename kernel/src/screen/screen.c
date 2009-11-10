@@ -1,5 +1,5 @@
-#include "screen.h"
-#include "../utils/utils.h"
+#include <screen/screen.h>
+#include <screen/utils.h>
 
 #define SCREEN_BIOS_ROWS    25
 #define SCREEN_BIOS_COLS    80
@@ -7,7 +7,7 @@
 //Current screen mode
 static enum screen_mode current_screen_mode;
 //Current screen pointer
-static ubyte* current_screen_pointer;
+static uint8_t* current_screen_pointer;
 
 /*BIOS screen functions*/
 void write_char_bios(const char c);
@@ -41,7 +41,7 @@ int kprint(const char *format, ...)
                 //for 32-bit signed ints, 12 char's are enough (including \0) 
                 char buff[12];
                 
-                uint base;
+                unsigned int base;
                 if(c=='d' || c=='i' || c=='u')
                 {
                     base = 10;
@@ -173,7 +173,7 @@ void set_screen_mode(enum screen_mode mode)
     current_screen_mode = mode;
 }
 
-void set_screen_pointer(ubyte* screen_ptr)
+void set_screen_pointer(uint8_t* screen_ptr)
 {
     current_screen_pointer = screen_ptr;
 }

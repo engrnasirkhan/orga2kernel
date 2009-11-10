@@ -49,7 +49,7 @@ reg_t getCR0() {
 
 /** @brief Establece el contenido del CR4 */
 void inline setCR4( reg_t cr4 ) {
-	__asm__ __volatile__ ( "movl %0, %%cr0" : : "r"(cr0) );
+	__asm__ __volatile__ ( "movl %0, %%cr4" : : "r"(cr4) );
 }
 
 /** @brief Obtiene el contenido del CR4 */

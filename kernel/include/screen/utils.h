@@ -5,8 +5,6 @@
 #ifndef __KERNEL_UTILS_H__
 #define __KERNEL_UTILS_H__
 
-#include "../types.h"
-
-void itoa(uint n, char* buffer, uint base);
+void uitoa(unsigned int n, char* buffer, unsigned int base);
 
 #endif

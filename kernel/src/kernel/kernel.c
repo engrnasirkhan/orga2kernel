@@ -1,12 +1,13 @@
-#include "multiboot.h"
-#include "screen/screen.h"
+#include <asm/types.h>
+#include <boot/multiboot.h>
+#include <screen/screen.h>
 
 void kmain(multiboot_info_t* mbd, unsigned int magic)
 {
     //use BIOS screen functions
     set_screen_mode(BIOS);
     //when paging is enabled, this pointer could change, or not.
-    set_screen_pointer((ubyte*) 0xb8000);
+    set_screen_pointer((uint8_t*) 0xb8000);
     //clear screen
     kclrscreen();
     

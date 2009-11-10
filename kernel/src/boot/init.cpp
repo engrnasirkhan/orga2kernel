@@ -1,3 +1,4 @@
+/*
 #include <asm/types.h>
 #include <asm/gdt.h>
 #include <asm/idt.h>
@@ -7,3 +8,4 @@
 extern "C" void kinit(  ) __init {
 
 }
+*/

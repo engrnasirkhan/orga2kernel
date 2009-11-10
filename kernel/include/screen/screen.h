@@ -5,7 +5,7 @@
 #ifndef __SCREEN_H__
 #define __SCREEN_H__
 
-#include "../types.h"
+#include <asm/types.h>
 
 //los posibles modos de la pantalla. Por default se usa BIOS.
 enum screen_mode {
@@ -24,6 +24,6 @@ void kclrscreen();
 //sets screen mode
 void set_screen_mode(enum screen_mode mode);
 
-void set_screen_pointer(ubyte* screen_ptr);
+void set_screen_pointer(uint8_t* screen_ptr);
 
 #endif
