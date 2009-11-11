@@ -1,6 +1,7 @@
 # Flags necesarios no dependientes de la arquitectura
-C_FLAGS = -std=gnu99 -ffreestanding -nostdlib -nostdinc -nostartfiles -nodefaultlibs -static -Iinclude # -fno-builtin
-CXX_FLAGS = -fno-rtti -nostdinc++ -std=gnu++0x -ffreestanding -nostdlib -nostdinc -nostartfiles -nodefaultlibs -static -Iinclude # -fno-builtin
+INCLUDES = -Iinclude -Iinclude/lib
+C_FLAGS = -std=gnu99 -ffreestanding -nostdlib -nostdinc -nostartfiles -nodefaultlibs -static $(INCLUDES) # -fno-builtin
+CXX_FLAGS = -fno-rtti -nostdinc++ -std=gnu++0x -ffreestanding -nostdlib -nostdinc -nostartfiles -nodefaultlibs -static $(INCLUDES) # -fno-builtin
 LD_FLAGS = -nostdlib
 AS_FLAGS =
 CAS_FLAGS = $(C_FLAGS)

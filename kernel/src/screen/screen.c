@@ -1,5 +1,6 @@
 #include <screen/screen.h>
 #include <screen/utils.h>
+#include <stdarg.h>
 
 #define SCREEN_BIOS_ROWS    25
 #define SCREEN_BIOS_COLS    80
@@ -16,11 +17,9 @@ void clear_screen_bios();
 
 int kprint(const char *format, ...)
 {
-    char **arguments = (char **) &format;
-    
-    //now 'arguments' should be pointing to the other args that follow 'format'
-    arguments++;
-    
+    va_list ap;
+	 va_start(ap, format);
+
     char c;
     int char_count = 0;
     
@@ -37,7 +36,7 @@ int kprint(const char *format, ...)
 
             if(c=='d' || c=='i' || c=='u' || c=='x' || c=='o')
             {
-                int d = *((int*) arguments++);
+                int d = va_arg( ap, int );
                 //for 32-bit signed ints, 12 char's are enough (including \0) 
                 char buff[12];
                 
@@ -71,7 +70,7 @@ int kprint(const char *format, ...)
             }
             else if(c=='s')
             {
-                char* s = *arguments++;
+                char* s = va_arg( ap, char * );
                 char p;
                 while((p=*s++) != '\0')
                 {
@@ -81,6 +80,7 @@ int kprint(const char *format, ...)
             }
         }
     }
+	 va_end( ap );
     
     return char_count;
 }
