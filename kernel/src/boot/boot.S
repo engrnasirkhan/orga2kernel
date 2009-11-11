@@ -97,7 +97,7 @@ continuar:
 	movl linea, %edi
 	call early_print
 
-	jmp kmain
+	call kmain
 
 	cli
 4:

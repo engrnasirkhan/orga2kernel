@@ -2,8 +2,8 @@ ENTRY(boot)
 
 PHDRS {
 	init PT_LOAD FLAGS(7); /* RWX */
-/*	codigo PT_LOAD FLAGS(5); /* R-X */
-/*	datos PT_LOAD FLAGS(6); /* RW- */
+	codigo PT_LOAD FLAGS(5); /* R-X */
+	datos PT_LOAD FLAGS(6); /* RW- */
 }
 
 SECTIONS {
@@ -31,7 +31,7 @@ SECTIONS {
 	 * saber donde está el inicio y el fin del kernel
 	 */
 	. = ALIGN(0x1000);
-	/*__kernel_start = .;
+	__kernel_start = .;
 	.text : {
 		*(.text .rodata .rdata)
 	} :codigo
@@ -43,6 +43,6 @@ SECTIONS {
 	.bss : {
 	     *(.bss)
 	     *(COMMON)
-	} :datos*/
+	} :datos
 	__kernel_end = .;
 }
