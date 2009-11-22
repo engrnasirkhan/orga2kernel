@@ -46,7 +46,22 @@ void kmain(multiboot_info_t* mbd, unsigned int magic)
                  mmap->length_low,
                  mmap->type);                   
     }
-    
+
+	 // Veamos si hay módulos
+	 if ( mbd->flags & 8 ) {
+	 	module_t *mod;
+		int i;
+		char *c;
+
+		kprint( "Modulos: %d (0x%x)\n", (int) mbd->mods_count, (int) mbd->mods_addr );
+		for ( i = 0, mod = (module_t *) mbd->mods_addr; i < mbd->mods_count; i++, mod++ ) {
+			kprint( "mod_start = 0x%x, mod_end = 0x%x, string = %s\n", (unsigned) mod->mod_start,
+				(unsigned) mod->mod_end, (char *) mod->string);
+			for ( c = (char *) mod->mod_start; c <= mod->mod_end; c++ )
+				kputc( *c );
+		}
+	 }
+
     while (1);
 }
 

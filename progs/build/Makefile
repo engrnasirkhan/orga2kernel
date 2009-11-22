@@ -1,5 +1,5 @@
 # Flags necesarios no dependientes de la arquitectura
-INCLUDES = -Iinclude -Iinclude/lib
+INCLUDES = -I../lib/include 
 C_FLAGS = -std=gnu99 -ffreestanding -nostdlib -nostdinc -nostartfiles -nodefaultlibs -static $(INCLUDES) # -fno-builtin
 CXX_FLAGS = -fno-exceptions -fno-rtti -nostdinc++ -std=gnu++0x -ffreestanding -nostdlib -nostdinc -nostartfiles -nodefaultlibs -static $(INCLUDES) # -fno-builtin
 LD_FLAGS = -nostdlib 
@@ -13,7 +13,7 @@ ifeq ($(shell uname -m),x86_64)
 	CXX_FLAGS += -m32
 	CAS_FLAGS += -m32
 	AS_FLAGS += --32
-	LD_FLAGS += --oformat elf32-i386 -m elf_i386
+	LD_FLAGS += --oformat binary -m elf_i386
 endif
 
 # Flags normales y modificables
@@ -42,16 +42,11 @@ SOURCES = $(foreach i, $(DIRS), $(wildcard $(i)/*.c $(i)/*.cpp $(i)/*.S $(i)/*.s
 OBJS = $(addprefix .obj/, $(addsuffix .o, $(basename $(SOURCES))) $(addsuffix .o, $(basename $(SRCS))))
 OBJSDIRS = $(sort $(dir $(OBJS)))
 
-.PHONY: all clean disk kernel
-all: $(DISQUETTE)
+.PHONY: all clean 
+all: $(TARGET) 
 
-kernel: $(TARGET)
 $(TARGET): $(OBJSDIRS) $(OBJS)
-	$(LD) $(LD_FLAGS) $(LDFLAGS) -T $(LINKER_LD) $(OBJS) -o $(TARGET)
-
-disk: $(DISQUETTE)
-$(DISQUETTE): $(TARGET)
-	mcopy -oi $@ $< ::/BOOT
+	$(LD) $(LD_FLAGS) $(LDFLAGS) -T../build/linker.ld $(OBJS) -L../lib -lc -o $(TARGET)
 
 $(OBJSDIRS):
 	mkdir -p $@
