@@ -1,7 +1,20 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <time.h>
 
+int main( const char *argv ) {
+	printf ( "Argumentos: %s\n", argv );
+	puts ( "Numes aleatorios:" );
+	for ( int i = 0; i < 10; i++ )
+		printf ( "%d ", rand() );
+
+	if ( !strcmp( argv, "/boot/ej1 Hola Mundo :-)" ) )
+		return 123456789;
+	return 987654321;
+}
+
+/*
 int main(int argc, char **argv) {
 	printf ( "Argumentos: %d\n", argc );
 	for ( int i = 0; i < argc; i++ )
@@ -13,6 +26,5 @@ int main(int argc, char **argv) {
 		printf ( "%d ", rand() );
 	}
 
-	volatile int no_optimizar;
-	for (;;) no_optimizar = 1;
-}
+	return 0;
+}*/

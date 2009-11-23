@@ -20,5 +20,8 @@ extern size_t strlen( const char * );
 extern char *strcat( char *d, char *o );
 extern char *strncat( char *d, char *o, size_t n );
 
+extern int strcmp( const char *s1, const char *s2 );
+extern int strncmp( const char *s1, const char *s2, size_t n );
+
 CDECLEND
 #endif // __STRING__H__

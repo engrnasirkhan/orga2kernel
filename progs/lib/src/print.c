@@ -263,7 +263,7 @@ int vprintf( const char *fmt, va_list ap ) {
 	int res;
 	char buffer[BUFFER_SIZE];
 	res = vsnprintf( buffer, BUFFER_SIZE, fmt, ap );
-	return fwrite( buffer, 1, res, stdout );
+	return write( 1, buffer, res );
 }
 
 int vsprintf( char *buffer, const char *fmt, va_list ap ) {

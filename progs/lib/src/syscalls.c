@@ -1,8 +1,16 @@
 #include <types.h>
 
-
 ssize_t write( int fd, const void *buf, size_t num ) {
+	static short *video = (short *) 0xB8000;
+	const char *datos = buf;
+
 	// TODO: Llamada al sistema
+	if ( fd == 1 ) {
+		while ( num-- ) {
+			*video++ = (short) *datos++ | 0x7f00;
+		}
+	}
+
 	return 0;
 }
 
