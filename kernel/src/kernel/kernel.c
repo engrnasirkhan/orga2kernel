@@ -1,3 +1,4 @@
+#include <asm/asm.h>
 #include <asm/types.h>
 #include <boot/multiboot.h>
 #include <boot/programs.h>
@@ -9,8 +10,6 @@ static void ejecutar ( unsigned long phys_start, unsigned long phys_end, char *c
 	unsigned int *cr3;
 	reg_t entrada_vieja;
 	int ret_status;
-
-	void (*func) ( char * );
 
 	if ( p->magic[0] != 'E' ||
 		p->magic[1] != 'X' ||
@@ -66,9 +65,6 @@ static void ejecutar ( unsigned long phys_start, unsigned long phys_end, char *c
 		: "=rm"(ret_status) : "rm"(cmdline), "r"(p->va_entry)
 	);
 
-	//func = p->va_entry;
-	//(*func) ( cmdline ); //+ 0x80000000 );
-
 	// Volvamos a como estábamos
 	*entrada = entrada_vieja;
 	__asm__ __volatile__ ( "movl %0, %%cr3" : : "r"(cr3) );
@@ -76,26 +72,9 @@ static void ejecutar ( unsigned long phys_start, unsigned long phys_end, char *c
 	kprint ( "El programa devolvio el codigo de salida: %d\n", ret_status );
 }
 
-void kmain(multiboot_info_t* mbd, unsigned int magic)
+void kmain(multiboot_info_t*) __noreturn;
+void kmain(multiboot_info_t* mbd)
 {
-    //use BIOS screen functions
-    set_screen_mode(BIOS);
-    //when paging is enabled, this pointer could change, or not.
-    set_screen_pointer((uint8_t*) 0xb8000);
-    //clear screen
-    kclrscreen();
-    
-    kprint("Initializing kernel...\n");
-
-    if (magic != 0x2BADB002)
-    {
-        kprint("Error: Multiboot magic number is not 0x2BADB002 !!!\n");
-        //halt !
-        while(1);
-    }
-    
-    //We can rely on multiboot structures :)
-
     //if flags' bit 0 is set, then mem_lower & mem_upper available
     if(mbd->flags & 0x0001)
     { 

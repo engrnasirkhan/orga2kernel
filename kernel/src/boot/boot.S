@@ -7,7 +7,7 @@
 .equ virtual_start, 0x80000000
 
 .extern __kernel_end
-.extern kmain
+.extern kinit
 
 .section .init.text,"ax",@progbits
 .section .init.rodata,"a",@progbits
@@ -97,7 +97,7 @@ continuar:
 	movl linea, %edi
 	call early_print
 
-	call kmain
+	call kinit
 
 	cli
 4:
@@ -118,6 +118,7 @@ early_print:
 	ret
 
 .sect .init.rodata
+.align 16
 temporal_gdt:
 	.short fin_temporal_gdt - temporal_gdt - 1
 	.long temporal_gdt - virtual_start

@@ -1,8 +1,10 @@
+include proyecto.mk
+
 # Flags necesarios no dependientes de la arquitectura
 INCLUDES = -Iinclude -Iinclude/lib
 C_FLAGS = -std=gnu99 -ffreestanding -nostdlib -nostdinc -nostartfiles -nodefaultlibs -static $(INCLUDES) # -fno-builtin
 CXX_FLAGS = -fno-exceptions -fno-rtti -nostdinc++ -std=gnu++0x -ffreestanding -nostdlib -nostdinc -nostartfiles -nodefaultlibs -static $(INCLUDES) # -fno-builtin
-LD_FLAGS = -nostdlib 
+LD_FLAGS = -nostdlib -Map=$(LINKER_MAP)
 AS_FLAGS =
 CAS_FLAGS = $(C_FLAGS)
 CAS ?= $(CC)
@@ -35,8 +37,6 @@ LDFLAGS ?= # -O1 -s -x -static
 
 .obj/%.o: %.S
 	$(CAS) $(CAS_FLAGS) $(CASFLAGS) -c $< -o $@
-
-include proyecto.mk
 
 SOURCES = $(foreach i, $(DIRS), $(wildcard $(i)/*.c $(i)/*.cpp $(i)/*.S $(i)/*.s $(i)/*.asm))
 OBJS = $(addprefix .obj/, $(addsuffix .o, $(basename $(SOURCES))) $(addsuffix .o, $(basename $(SRCS))))

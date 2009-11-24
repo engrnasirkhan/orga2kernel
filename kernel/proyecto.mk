@@ -1,5 +1,6 @@
-DIRS = src/ src/kernel src/boot src/mem src/proc src/screen
+DIRS = src/ src/asm src/boot src/kernel src/lib src/mem src/proc src/screen
 SRCS =
 LINKER_LD = linker.ld
+LINKER_MAP = System.map
 TARGET = kernel.elf
 DISQUETTE = disquette.img

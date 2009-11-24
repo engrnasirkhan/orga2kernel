@@ -15,5 +15,14 @@ typedef unsigned long long int uint64_t;
 
 typedef uint32_t reg_t;
 typedef void *ptr_t;
+typedef unsigned int size_t;
+typedef signed int time_t;
+
+typedef struct __attribute__ ((packed)) {
+	uint16_t limit;
+	uint32_t base;
+} gdtr_t; // __attribute__ ((packed));
+typedef gdtr_t idtr_t;
+
 
 #endif
