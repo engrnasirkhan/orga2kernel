@@ -24,6 +24,19 @@ void gdt_fill_data_segment( struct GDTEntry *gdt, void *base, unsigned long limi
 	gdt->avl = 0;
 }
 
+void gdt_fill_tss_segment( struct GDTEntry *gdt, void *base, unsigned long limit, unsigned char dpl ) {
+	gdt_set_base( gdt, (unsigned long) base );
+	gdt_set_limit( gdt, limit );
+	gdt->type = 0x9; 
+	gdt->system = 0;
+	gdt->dpl = dpl & 0x3;
+	gdt->present = 1;
+	gdt->l = 0;
+	gdt->d = 0;
+	gdt->g = 1;
+	gdt->avl = 0;
+}
+
 void gdt_set_base( struct GDTEntry *gdt, unsigned long addr ) {
 	gdt->base_low = addr & 0xFFFF;
 	gdt->base_mid = (addr >> 16) & 0xFF;
@@ -41,4 +54,27 @@ unsigned long gdt_get_base( struct GDTEntry *gdt ) {
 
 unsigned long gdt_get_limit( struct GDTEntry *gdt ) {
 	return gdt->limit_low | (gdt->limit_high << 16);
+}
+
+void gdt_add_descriptor(struct GDTEntry *gdt_address,unsigned int *cant,struct GDTEntry *gdt){
+
+gdt_address[*cant] = *gdt;
+(*cant) = (*cant)+1;
+		
+}
+
+void gdt_print(struct GDTEntry *gdt_address,unsigned int cant){
+	
+	unsigned int *base = gdt_address;
+	kprint("Tam %u",cant);
+	kprint("\n");
+	for(unsigned int i = 0; i < cant ; ++i){
+			kprint("GDT %x",i);
+			kprint("  %x",base[i*2]);
+			kprint("   ");
+			kprint("  %x",base[i*2+1]);			
+			kprint("\n");
+	}
+	
+	
 }

@@ -3,8 +3,12 @@
 #include <boot/multiboot.h>
 #include <boot/programs.h>
 #include <screen/screen.h>
+#include <asm/gdt.h>
+#include <asm/asm.h>
+#include <asm/types.h>
 
 static reg_t mapa_programa[1024] __attribute__ ((aligned (4096)));
+
 static void ejecutar ( unsigned long phys_start, unsigned long phys_end, char *cmdline ) {
 	programs_t *p = (programs_t *) phys_start;
 	unsigned int *cr3;
@@ -72,6 +76,8 @@ static void ejecutar ( unsigned long phys_start, unsigned long phys_end, char *c
 	kprint ( "El programa devolvio el codigo de salida: %d\n", ret_status );
 }
 
+
+
 void kmain(multiboot_info_t*) __noreturn;
 void kmain(multiboot_info_t* mbd)
 {
@@ -111,5 +117,36 @@ void kmain(multiboot_info_t* mbd)
 			ejecutar( mod->mod_start, mod->mod_end, (char *) mod->string );
 		}
 	 }
+	
+		
+	//Tamaño inical de GDT
+	unsigned int gdt_tam = 5; 					//contando el nulo 
+	struct GDTEntry *direccion_gdt =0x00104010; // arranca ahi
+			
+	//Creamos 5 entradas a la GDT, del tipo TSS Descriptor
+	struct GDTEntry t1;
+	struct GDTEntry t2;
+	struct GDTEntry t3;
+	
+	//Seteamos los parametros de los descriptores (base, limite, dpl)
+	gdt_fill_tss_segment(&t1,0x0,0x100,0x00); 
+	gdt_fill_tss_segment(&t2,0x10,0x100,0x00); 
+	gdt_fill_tss_segment(&t3,0x100,0x100,0x01); 
+	
+
+	//Agregamos los descriptores a la GDT
+	gdt_add_descriptor(direccion_gdt,&gdt_tam,&t1);
+	gdt_add_descriptor(direccion_gdt,&gdt_tam,&t2);
+	gdt_add_descriptor(direccion_gdt,&gdt_tam,&t3);
+	
+	//Creamos registro para cargar la GDT
+	gdtr_t carga;
+	carga.limit= gdt_tam* 8;
+	carga.base = *direccion_gdt;   
+	
+	//Cargamos la nueva GDT
+	lgdt(&carga);
+	
+		 
     while (1);
 }

@@ -64,4 +64,22 @@ void gdt_fill_code_segment( struct GDTEntry *gdt, void *base, unsigned long limi
  */
 void gdt_fill_data_segment( struct GDTEntry *gdt, void *base, unsigned long limit, unsigned char dpl );
 
+
+
+/** @brief Establece un segmento de tss.
+ *  @param gdt La entrada a establecer.
+ *  @param base Un puntero a la dirección base del segmento.
+ *  @param limit El límite del segmento.
+ *  @param dpl El nivel de privilegio del segmento.
+ *
+ *  Rellena el segmento con los datos pasados como parámetros.
+ *  El segmento producido es de 32 bits, con granularidad de 4KB,
+ *  está presente y AVL=0.
+ */
+void gdt_fill_tss_segment( struct GDTEntry *gdt, void *base, unsigned long limit, unsigned char dpl );
+
+
+void gdt_add_descriptor(struct GDTEntry *gdt_address,unsigned int *cant,struct GDTEntry *gdt);
+
+void gdt_print(struct GDTEntry *gdt_address,unsigned int cant);
 #endif //__GDT__H__
