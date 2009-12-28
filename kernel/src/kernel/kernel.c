@@ -142,7 +142,7 @@ void kmain(multiboot_info_t* mbd)
 	//Creamos registro para cargar la GDT
 	gdtr_t carga;
 	carga.limit= gdt_tam* 8;
-	carga.base = *direccion_gdt;   
+	carga.base = direccion_gdt;   
 	
 	//Cargamos la nueva GDT
 	lgdt(&carga);
