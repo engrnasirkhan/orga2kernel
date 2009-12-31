@@ -4,8 +4,7 @@
 #include <boot/programs.h>
 #include <screen/screen.h>
 #include <asm/gdt.h>
-#include <asm/asm.h>
-#include <asm/types.h>
+#include <asm/idt.h>
 
 static reg_t mapa_programa[1024] __attribute__ ((aligned (4096)));
 
@@ -118,34 +117,46 @@ void kmain(multiboot_info_t* mbd)
 		}
 	 }
 	
+	///Creamos GDT con algunas tareas
+		//Tamaño inical de GDT
+		unsigned int gdt_tam = 5; 					//contando el nulo 
+		struct GDTEntry *direccion_gdt =0x00104010; // arranca ahi
+				
+		//Creamos 5 entradas a la GDT, del tipo TSS Descriptor
+		struct GDTEntry t1;
+		struct GDTEntry t2;
+		struct GDTEntry t3;
 		
-	//Tamaño inical de GDT
-	unsigned int gdt_tam = 5; 					//contando el nulo 
-	struct GDTEntry *direccion_gdt =0x00104010; // arranca ahi
-			
-	//Creamos 5 entradas a la GDT, del tipo TSS Descriptor
-	struct GDTEntry t1;
-	struct GDTEntry t2;
-	struct GDTEntry t3;
-	
-	//Seteamos los parametros de los descriptores (base, limite, dpl)
-	gdt_fill_tss_segment(&t1,0x0,0x100,0x00); 
-	gdt_fill_tss_segment(&t2,0x10,0x100,0x00); 
-	gdt_fill_tss_segment(&t3,0x100,0x100,0x01); 
-	
+		//Seteamos los parametros de los descriptores (base, limite, dpl)
+		gdt_fill_tss_segment(&t1,0x0,0x100,0x00); 
+		gdt_fill_tss_segment(&t2,0x10,0x100,0x00); 
+		gdt_fill_tss_segment(&t3,0x100,0x100,0x01); 
+		
 
-	//Agregamos los descriptores a la GDT
-	gdt_add_descriptor(direccion_gdt,&gdt_tam,&t1);
-	gdt_add_descriptor(direccion_gdt,&gdt_tam,&t2);
-	gdt_add_descriptor(direccion_gdt,&gdt_tam,&t3);
+		//Agregamos los descriptores a la GDT
+		gdt_add_descriptor(direccion_gdt,&gdt_tam,&t1);
+		gdt_add_descriptor(direccion_gdt,&gdt_tam,&t2);
+		gdt_add_descriptor(direccion_gdt,&gdt_tam,&t3);
+		
+		//Creamos registro para cargar la GDT
+		gdtr_t carga_gdt;
+		carga_gdt.limit= gdt_tam* 8;
+		carga_gdt.base = direccion_gdt;   
+		
+		//Cargamos la nueva GDT
+		lgdt(&carga_gdt);
 	
-	//Creamos registro para cargar la GDT
-	gdtr_t carga;
-	carga.limit= gdt_tam* 8;
-	carga.base = direccion_gdt;   
-	
-	//Cargamos la nueva GDT
-	lgdt(&carga);
+	///Creamos IDT pero no le seteamos nada
+		//Creamos idt
+		struct IDTEntry idt[256];
+		//Seteamos valores para cargarla
+		idtr_t carga_idt;
+		carga_idt.limit = 256*8;
+		carga_idt.base = idt;
+		//Cargamos
+		lidt(&carga_idt);
+		
+		
 	
 		 
     while (1);
