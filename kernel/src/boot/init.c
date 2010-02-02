@@ -7,6 +7,7 @@
 #include <kernel/globals.h>
 #include <boot/multiboot.h>
 #include <screen/screen.h>
+#include <drivers/pic8259A.h>
 //#include <asm/page.h>
 
 extern void kmain( multiboot_info_t * ) __noreturn;
@@ -56,7 +57,7 @@ void kinit ( multiboot_info_t* mbd, unsigned int magic ) {
 	lidt( (void *) ((unsigned long) &g_IDTr - 0x80000000) ); // Dirección física
 	init_isrs();
 	init_irqs();
-	sti();
+	pic8259A_init();
 
 	// Inicializamos el cmdline
 	cmdline_init ( (const char *) mbd->cmdline );

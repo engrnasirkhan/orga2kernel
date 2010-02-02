@@ -50,6 +50,13 @@ extern uint8_t inb( uint16_t port );
 extern uint16_t inw( uint16_t port );
 extern uint32_t ind( uint16_t port );
 */
+extern void io_wait();
+
+static inline uint8_t inb( uint16_t port ) {
+	uint8_t res;
+	__asm__ __volatile__ ( "inb %%dx, %%al" : "=al"(res) : "dx"(port) );
+	return res;
+}
 
 #define sti() __asm__ __volatile__( "sti" );
 #define cli() __asm__ __volatile__( "cli" );

@@ -5,6 +5,7 @@
 #include <screen/screen.h>
 #include <asm/gdt.h>
 #include <asm/idt.h>
+#include <asm/handlers.h>
 #include <kernel/globals.h>
 
 static reg_t mapa_programa[1024] __attribute__ ((aligned (4096)));
@@ -76,6 +77,23 @@ static void ejecutar ( unsigned long phys_start, unsigned long phys_end, char *c
 	kprint ( "El programa devolvio el codigo de salida: %d\n", ret_status );
 }
 
+int timer( struct registers *r ) {
+	static int cuenta = 0;
+	static int segundos = 0;
+	cuenta++;
+	if ( cuenta >= 18 ) {
+		segundos++;
+		cuenta -= 18;
+		kprint ( "Segundos: %d\n", segundos );
+	}
+	return 0;
+}
+
+int teclado( struct registers *r ) {
+	uint8_t key = inb( 0x60 );
+	kprint ( "Apretaste el teclado: %d(%x)\n", key, key );
+	return 0;
+}
 
 void kmain(multiboot_info_t*) __noreturn;
 void kmain(multiboot_info_t* mbd)
@@ -116,6 +134,10 @@ void kmain(multiboot_info_t* mbd)
 			ejecutar( mod->mod_start, mod->mod_end, (char *) mod->string );
 		}
 	 }
+	 
+	set_irq_handler( 0, &timer );
+	set_irq_handler( 1, &teclado );
+	sti();
 
 	while (1);
 }

@@ -1,4 +1,5 @@
 #include <asm/types.h>
+#include <asm/asm.h>
 
 void lidt( void *idtr ) {
 	idtr_t *idtreg = idtr;
@@ -35,16 +36,11 @@ reg_t getCR4() {
 	return cr4;
 }
 
+void io_wait() {
+	outb( 0x80, 0x00 ); // Delay como lo hace linux.
+}
+
 /*
-void outb( uint16_t port, uint8_t value ) {
-}
-
-void outw( uint16_t port, uint16_t value ) {
-}
-
-void outd( uint16_t port, uint32_t value ) {
-}
-
 uint8_t inb( uint16_t port ) {
 	__asm__ __volatile__
 }

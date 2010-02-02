@@ -5,6 +5,7 @@
 #include <asm/isrs.h>
 #include <kernel/globals.h>
 #include <kernel/panic.h>
+#include <drivers/pic8259A.h>
 
 handler_t g_ISRS[32];
 handler_t g_IRQS[16];
@@ -110,6 +111,7 @@ void irq_dispatch_routine( struct registers regs ) {
 	} else {
 		debug( "IRQ %d no manejada.", regs.nro );
 	}
+	pic8259A_send_EOI( regs.nro );
 }
 
 void set_irq_handler( int irq, handler_t handler ) {
