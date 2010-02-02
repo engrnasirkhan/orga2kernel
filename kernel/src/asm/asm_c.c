@@ -34,3 +34,25 @@ reg_t getCR4() {
 	__asm__ __volatile__ ( "movl %%cr4, %0" : "=r"(cr4) );
 	return cr4;
 }
+
+/*
+void outb( uint16_t port, uint8_t value ) {
+}
+
+void outw( uint16_t port, uint16_t value ) {
+}
+
+void outd( uint16_t port, uint32_t value ) {
+}
+
+uint8_t inb( uint16_t port ) {
+	__asm__ __volatile__
+}
+
+uint16_t inw( uint16_t port ) {
+}
+
+uint32_t ind( uint16_t port ) {
+}
+
+*/

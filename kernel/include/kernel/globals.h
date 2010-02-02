@@ -16,4 +16,7 @@ extern idtr_t g_IDTr;
 /** El Commandline, 256 caracteres por defecto **/
 extern char g_cmdline[256];
 
+extern handler_t g_ISRS[32];
+extern handler_t g_IRQS[16];
+
 #endif // __GLOBALS__H__

@@ -13,3 +13,13 @@ void idt_set_interrupt( struct IDTEntry *idt, unsigned int segment, unsigned int
 	idt->present = 1;
 	idt->offset_high = offset >> 16;
 }
+
+void idt_set_task( struct IDTEntry *idt, unsigned short tss_selector, unsigned int dpl ) {
+	idt_set_interrupt( idt, tss_selector, 0, dpl );
+	idt->type = 0x5;
+}
+
+void idt_set_trap( struct IDTEntry *idt, unsigned int segment, unsigned int offset, unsigned int dpl ) {
+	idt_set_interrupt( idt, segment, offset, dpl );
+	idt->type = 0xF;
+}

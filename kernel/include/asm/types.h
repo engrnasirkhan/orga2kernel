@@ -24,5 +24,17 @@ typedef struct __attribute__ ((packed)) {
 } gdtr_t; // __attribute__ ((packed));
 typedef gdtr_t idtr_t;
 
+struct registers {
+	reg_t edi, esi, ebp, esp, ebx, edx, ecx, eax; // Guardados por PUSHA.
+	uint32_t nro, errcode; // Pusheadas a mano.
+	reg_t eip, cs, eflags; // Pusheadas por la interrupción.
+	reg_t old_esp, ss; // Pusheadas sólo en cambio de privilegio (cs != kernel_cs)
+} __attribute__ ((packed));
+
+typedef struct __attribute__((packed)) registers registers_t;
+
+typedef int (*handler_t)( struct registers * );
+//typedef (int (*) (struct registers *)) handler_t;
+
 
 #endif

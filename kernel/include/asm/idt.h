@@ -27,10 +27,7 @@ void idt_set_interrupt( struct IDTEntry *idt, unsigned int segment, unsigned int
  * @param offset El offset a utilizar.
  * @param dpl El DPL a utilizar.
  */
-void inline idt_set_task( struct IDTEntry *idt, unsigned short tss_selector, unsigned int dpl ) {
-	idt_set_interrupt( idt, tss_selector, 0, dpl );
-	idt->type = 0x5;
-}
+void idt_set_task( struct IDTEntry *idt, unsigned short tss_selector, unsigned int dpl );
 
 /**
  * @brief Establece un Trap Gate.
@@ -39,9 +36,6 @@ void inline idt_set_task( struct IDTEntry *idt, unsigned short tss_selector, uns
  * @param offset El offset a utilizar.
  * @param dpl El DPL a utilizar.
  */
-void inline idt_set_trap( struct IDTEntry *idt, unsigned int segment, unsigned int offset, unsigned int dpl ) {
-	idt_set_interrupt( idt, segment, offset, dpl );
-	idt->type = 0xF;
-}
+void idt_set_trap( struct IDTEntry *idt, unsigned int segment, unsigned int offset, unsigned int dpl );
 
 #endif // __IDT__H__

@@ -2,6 +2,7 @@
 #include <asm/asm.h>
 #include <asm/gdt.h>
 #include <asm/idt.h>
+#include <asm/handlers.h>
 #include <kernel/cmdline.h>
 #include <kernel/globals.h>
 #include <boot/multiboot.h>
@@ -53,7 +54,9 @@ void kinit ( multiboot_info_t* mbd, unsigned int magic ) {
 	g_IDTr.base = (uint32_t) g_IDT - 0x80000000;
 	// Por lo que entiendo, LIDT puede leer una dirección virtual.
 	lidt( (void *) ((unsigned long) &g_IDTr - 0x80000000) ); // Dirección física
-	// sti();
+	init_isrs();
+	init_irqs();
+	sti();
 
 	// Inicializamos el cmdline
 	cmdline_init ( (const char *) mbd->cmdline );
