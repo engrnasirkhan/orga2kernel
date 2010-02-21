@@ -10,7 +10,7 @@ void uitoa(unsigned int n, char* s, unsigned int base)
     s[i--] = '\0';
     
     //reverse buffer
-    int size = i;
+    int size = i + 1;
     int j=0;
     while(j < size/2)
     {
