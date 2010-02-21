@@ -1,5 +1,5 @@
 #include <asm/asm.h>
-
+#include <screen/screen.h>
 void debug( const char *fmt, ... ) {
 	while ( *fmt )
 		kputc( *fmt++ );
