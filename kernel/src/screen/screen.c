@@ -128,7 +128,7 @@ void write_char_bios(const char c)
     {
         //move up the whole screen
         int i,j;
-        for(i=0; i<SCREEN_BIOS_ROWS-1; i++)
+        for(i=1; i<SCREEN_BIOS_ROWS; i++)
         {
             for(j=0; j<SCREEN_BIOS_COLS; j++)
             {
