@@ -17,6 +17,7 @@ char slot[10];
 
 //funcion que imprime el menu
 void menu(){
+	__asm__ __volatile__ ("xchg %bx,%bx");
 kclrscreen();
 kprint("Menu miOS: Como operar \n \n \n \n");
 kprint("- Para cargar programa: cargar letra_de_programa numero_de_slot \n");
@@ -25,7 +26,7 @@ kprint("- Para matar un programa: matar numero_de_slot \n");
 kprint("        ej:  matar 5 \n \n");
 kprint("- Para cambiar quantum: quantum numero_de_slot valor(1-20) \n");
 kprint("        ej:  quantum numero_de_slot 13 \n \n \n");
-kprint("\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n");
+kprint("\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n");
 }
 
 // funcion que permuta tareas
@@ -132,7 +133,7 @@ int teclado( struct registers *r ) {
 	cli();
 	uint8_t key = inb( 0x60 );
 //  __asm__ __volatile__ ("xchg %bx,%bx");
-if( key==1 || (key>58 && key<69)) kclrscreen();
+if (key==1 || (key >58 && key<69)){				//si entro aca fue para cambiar de slot o al menu
 	if (key ==1) menu(); // Si apreto Esc
 	if (key==59) mostrar_slot(1);
 	if (key==60) mostrar_slot(2);
@@ -144,7 +145,9 @@ if( key==1 || (key>58 && key<69)) kclrscreen();
 	if (key==66) mostrar_slot(8);
 	if (key==67) mostrar_slot(9);
 	if (key==68) mostrar_slot(10);
+}else {}								// aca deberis ir algo para que capture lo que se escribe y lo mande en el slot donde esta o menu
 
+    
 	sti();
 	return 0;
 }
