@@ -22,8 +22,8 @@ section .data
 
     dummy_gdt:
 	    dd 0, 0
-	    db 0xFF, 0xFF, 0, 0, 0, 10011010b, 11001111b, 0x80	; code selector 0x08: base 0x40000000, limit 0xFFFFFFFF, type 0x9A, granularity 0xCF
-	    db 0xFF, 0xFF, 0, 0, 0, 10010010b, 11001111b, 0x80	; data selector 0x10: base 0x40000000, limit 0xFFFFFFFF, type 0x92, granularity 0xCF
+	    db 0xFF, 0xFF, 0, 0, 0, 10011010b, 11001111b, 0x80	; code selector 0x08: base 0x80000000, limit 0xFFFFFFFF, type 0x9A, granularity 0xCF
+	    db 0xFF, 0xFF, 0, 0, 0, 10010010b, 11001111b, 0x80	; data selector 0x10: base 0x80000000, limit 0xFFFFFFFF, type 0x92, granularity 0xCF
 
     dummy_gdt_desc:
 	    dw $ - dummy_gdt 
