@@ -38,6 +38,9 @@ LDFLAGS ?= # -O1 -s -x -static
 .obj/%.o: %.S
 	$(CAS) $(CAS_FLAGS) $(CASFLAGS) -c $< -o $@
 
+.obj/%.o: %.asm
+	nasm -felf $< -o $@
+
 SOURCES = $(foreach i, $(DIRS), $(wildcard $(i)/*.c $(i)/*.cpp $(i)/*.S $(i)/*.s $(i)/*.asm))
 OBJS = $(addprefix .obj/, $(addsuffix .o, $(basename $(SOURCES))) $(addsuffix .o, $(basename $(SRCS))))
 OBJSDIRS = $(sort $(dir $(OBJS)))

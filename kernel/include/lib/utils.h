@@ -5,6 +5,8 @@
 #ifndef __KERNEL_UTILS_H__
 #define __KERNEL_UTILS_H__
 
-void uitoa(unsigned int n, char* buffer, unsigned int base);
+#include <asm/types.h>
+
+void uitoa(uint32_t n, uint8_t* buffer, uint32_t base);
 
 #endif

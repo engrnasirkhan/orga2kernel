@@ -1,48 +1,27 @@
 ENTRY(boot)
 
-PHDRS {
-	init PT_LOAD FLAGS(7); /* RWX */
-	codigo PT_LOAD FLAGS(5); /* R-X */
-	datos PT_LOAD FLAGS(6); /* RW- */
-}
-
 SECTIONS {
-	physical_start = 0x00100000;
+   	physical_start = 0x00100000;
 	virtual_start  = 0x80100000;
-	. = virtual_start;
+   
+   . = virtual_start;
 
-	/* Las rutinas de inicialización van en estas secciones
-	 * para así poder descartarlas luego de la inicialización
-	 * y liberar memoria */
-	.init.text virtual_start : AT(physical_start) {
-		*(.init.text .init.rodata)
-	} :init 
+   .text : AT(ADDR(.text) - 0x80000000) {
+       *(.text)
+       *(.rodata*)
+   }
 
-	.init.data : {
-		*(.init.data)
-	} :init
+   .data ALIGN (0x1000) : AT(ADDR(.data) - 0x80000000) {
+       *(.data)
+   }
 
-	.init.bss : {
-		*(.init.bss)
-	} :init
-
-	/* Las secciones comunes */
-	/* Definimos __kernel_start y __kernel_end para
-	 * saber donde está el inicio y el fin del kernel
-	 */
-	. = ALIGN(0x1000);
-	__kernel_start = .;
-	.text : {
-		*(.text .rodata .rdata)
-	} :codigo
-	
-	.data ALIGN(0x1000) : {
-	      *(.data)
-	} :datos
-
-	.bss : {
-	     *(.bss)
-	     *(COMMON)
-	} :datos
-	__kernel_end = .;
+   .bss : AT(ADDR(.bss) - 0x80000000) {
+       _sbss = .;
+       *(COMMON)
+       *(.bss)
+       _ebss = .;
+   }
+   
+   __kernel_end = .;
 }
+

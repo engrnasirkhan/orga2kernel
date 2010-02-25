@@ -8,6 +8,10 @@
 #include <asm/handlers.h>
 #include <kernel/globals.h>
 #include <scheduler/scheduler.h>
+#include <mem/memlayout.h>
+
+//funcion que inicializa gran parte de las estructuras del kernel
+extern void kinit ( multiboot_info_t* mbd ) __init;
 
 static reg_t mapa_programa[1024] __attribute__ ((aligned (4096)));
 //Creamos array de 10 tareas.
@@ -17,7 +21,7 @@ char slot[10];
 
 //funcion que imprime el menu
 void menu(){
-	__asm__ __volatile__ ("xchg %bx,%bx");
+	//__asm__ __volatile__ ("xchg %bx,%bx");
 kclrscreen();
 kprint("Menu miOS: Como operar \n \n \n \n");
 kprint("- Para cargar programa: cargar letra_de_programa numero_de_slot \n");
@@ -26,7 +30,7 @@ kprint("- Para matar un programa: matar numero_de_slot \n");
 kprint("        ej:  matar 5 \n \n");
 kprint("- Para cambiar quantum: quantum numero_de_slot valor(1-20) \n");
 kprint("        ej:  quantum numero_de_slot 13 \n \n \n");
-kprint("\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n");
+//kprint("\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n");
 }
 
 // funcion que permuta tareas
@@ -152,48 +156,32 @@ if (key==1 || (key >58 && key<69)){				//si entro aca fue para cambiar de slot o
 	return 0;
 }
 
-void kmain(multiboot_info_t*) __noreturn;
-void kmain(multiboot_info_t* mbd)
+void kmain(multiboot_info_t*, unsigned int magic ) __noreturn;
+void kmain(multiboot_info_t* mbd, unsigned int magic )
 {
-    //if flags' bit 0 is set, then mem_lower & mem_upper available
-    if(mbd->flags & 0x0001)
-    { 
-        kprint("Lower memory: %u Kb\n", mbd->mem_lower);
-        kprint("Upper memory: %u Kb\n", mbd->mem_upper);
-    }
+    if ( magic != 0x2BADB002 ) {
+		// TODO: Hacer un kputs.
+		kprint ( "Warning: No se inicializo con GRUB, intentando de todas formas.\n" );
+	}
+
+    //Primero tenemos que corregir mbd para que sea una direccion virtual valida
+    mbd = (multiboot_info_t*)( PA2KVA( (uint32_t) mbd) );
     
-    //if flags' bit 6 is set, then memory map is available
-    if(mbd->flags & 0x0020)
-    {
-       memory_map_t *mmap;
- 
-       kprint("Memory map:\n");
-       for(mmap = (memory_map_t *) mbd->mmap_addr;
-            (unsigned long) mmap < mbd->mmap_addr + mbd->mmap_length;
-            mmap = (memory_map_t *) ((unsigned long) mmap
-                                     + mmap->size + sizeof (mmap->size)))
-         kprint("  Size = 0x%x, Base_Address = 0x%x,"
-                 " Length = 0x%x, Type = 0x%x\n",
-                 mmap->size,
-                 mmap->base_addr_low,
-                 mmap->length_low,
-                 mmap->type);                   
+    //Ahora si, usando mbd que apunta bien a los datos del grub, inicializamos todo
+    kinit( mbd );
+
+    // Ejecutemos módulo por módulo.
+    if ( mbd->flags & 8 ) {
+        module_t *mod;
+        unsigned long i;
+
+        for ( i = 0, mod = (module_t *) mbd->mods_addr;
+		        i < mbd->mods_count;
+		        i++, mod++ ) {
+	        ejecutar( mod->mod_start, mod->mod_end, (char *) mod->string );
+        }
     }
 
-	 // Ejecutemos módulo por módulo.
-	 if ( mbd->flags & 8 ) {
-	 	module_t *mod;
-		unsigned long i;
-
-		for ( i = 0, mod = (module_t *) mbd->mods_addr;
-				i < mbd->mods_count;
-				i++, mod++ ) {
-			ejecutar( mod->mod_start, mod->mod_end, (char *) mod->string );
-		}
-	 }
-
-
-	
 	//Inicializamos un par de cosas del scheduler que habria que mover a algun lado
 	for (unsigned int i = 0; i <10 ; ++i) slot[i]=0;
 	tarea_activa =0;

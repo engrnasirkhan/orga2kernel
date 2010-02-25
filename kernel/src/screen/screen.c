@@ -1,5 +1,5 @@
 #include <screen/screen.h>
-#include <screen/utils.h>
+#include <lib/utils.h>
 #include <stdarg.h>
 
 #define SCREEN_BIOS_ROWS    25
@@ -11,17 +11,20 @@ static enum screen_mode current_screen_mode;
 static uint8_t* current_screen_pointer;
 
 /*BIOS screen functions*/
-void write_char_bios(const char c);
+void write_char_bios(const uint8_t c);
 void clear_screen_bios();
+
+static uint32_t bios_current_row = 0;
+static uint32_t bios_current_col = 0;
 /***********************/
 
-int kprint(const char *format, ...)
+int kprint(const uint8_t *format, ...)
 {
     va_list ap;
-	 va_start(ap, format);
+	va_start(ap, format);
 
-    char c;
-    int char_count = 0;
+    uint8_t c;
+    uint32_t char_count = 0;
     
     while((c = *format++) != '\0')
     {
@@ -36,11 +39,11 @@ int kprint(const char *format, ...)
 
             if(c=='d' || c=='i' || c=='u' || c=='x' || c=='o')
             {
-                int d = va_arg( ap, int );
+                int32_t d = va_arg( ap, int32_t );
                 //for 32-bit signed ints, 12 char's are enough (including \0) 
-                char buff[12];
+                uint8_t buff[12];
                 
-                unsigned int base;
+                uint32_t base;
                 if(c=='d' || c=='i' || c=='u')
                 {
                     base = 10;
@@ -61,7 +64,7 @@ int kprint(const char *format, ...)
                 }
                 
                 uitoa(d, buff, base);
-                int i=0;
+                int32_t i=0;
                 while(buff[i] != '\0')
                 {
                     kputc(buff[i++]);
@@ -70,8 +73,8 @@ int kprint(const char *format, ...)
             }
             else if(c=='s')
             {
-                char* s = va_arg( ap, char * );
-                char p;
+                uint8_t* s = va_arg( ap, uint8_t * );
+                uint8_t p;
                 while((p=*s++) != '\0')
                 {
                     kputc(p);
@@ -87,7 +90,7 @@ int kprint(const char *format, ...)
 
 
 
-void kputc(const char c)
+void kputc(const uint8_t c)
 {
     if(current_screen_mode == BIOS)
     {
@@ -100,34 +103,31 @@ void kputc(const char c)
 }
 
 
-void write_char_bios(const char c)
-{
-    static int current_row = 0;
-    static int current_col = 0;
-    
+void write_char_bios(const uint8_t c)
+{  
     if(c!='\n')
     {
         //write char
-        *(current_screen_pointer + (current_col + current_row * SCREEN_BIOS_COLS) * 2)      = c & 0xFF;
-        *(current_screen_pointer + (current_col + current_row * SCREEN_BIOS_COLS) * 2 + 1)  = 0x7;
+        *(current_screen_pointer + (bios_current_col + bios_current_row * SCREEN_BIOS_COLS) * 2)      = c & 0xFF;
+        *(current_screen_pointer + (bios_current_col + bios_current_row * SCREEN_BIOS_COLS) * 2 + 1)  = 0x7;
         //update col   
-        current_col = (current_col + 1) % SCREEN_BIOS_COLS;
+        bios_current_col = (bios_current_col + 1) % SCREEN_BIOS_COLS;
     }
     else
     {
         //do not write \n and update col
-        current_col = 0;
+        bios_current_col = 0;
     }
     
-    if(current_col==0)
+    if(bios_current_col==0)
     {
-        current_row++;
+        bios_current_row++;
     }
     
-    if(current_row > SCREEN_BIOS_ROWS)
+    if(bios_current_row > SCREEN_BIOS_ROWS)
     {
         //move up the whole screen
-        int i,j;
+        int32_t i,j;
         for(i=1; i<SCREEN_BIOS_ROWS; i++)
         {
             for(j=0; j<SCREEN_BIOS_COLS; j++)
@@ -137,7 +137,7 @@ void write_char_bios(const char c)
             }
         }
         
-        current_row = SCREEN_BIOS_ROWS-1;
+        bios_current_row = SCREEN_BIOS_ROWS-1;
     }
 }
 
@@ -156,7 +156,7 @@ void kclrscreen()
 
 void clear_screen_bios()
 {
-    int i,j;
+    int32_t i,j;
     for(i=0; i<SCREEN_BIOS_ROWS; i++)
     {
         for(j=0; j<SCREEN_BIOS_COLS; j++)
@@ -165,6 +165,9 @@ void clear_screen_bios()
            *(current_screen_pointer + (j + i * SCREEN_BIOS_COLS) * 2 + 1) = 0; 
         }
     }
+    
+    bios_current_row = 0;
+    bios_current_col = 0;
 }
 
 //sets screen mode

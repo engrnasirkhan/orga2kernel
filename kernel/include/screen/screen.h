@@ -2,8 +2,8 @@
  * Defines functions to write on screen
  */
  
-#ifndef __SCREEN_H__
-#define __SCREEN_H__
+#ifndef __SCREEN__H__
+#define __SCREEN__H__
 
 #include <asm/types.h>
 
@@ -14,9 +14,9 @@ enum screen_mode {
 };
 
 //Returns number of char's put to screen
-int kprint(const char* format, ...);
+int kprint(const uint8_t* format, ...);
 
-void kputc(const char c);
+void kputc(const uint8_t c);
 
 //clears screen
 void kclrscreen();
