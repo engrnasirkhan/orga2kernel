@@ -12,12 +12,14 @@
 
 //funcion que inicializa gran parte de las estructuras del kernel
 extern void kinit ( multiboot_info_t* mbd ) __init;
-
 static reg_t mapa_programa[1024] __attribute__ ((aligned (4096)));
+
 //Creamos array de 10 tareas.
 tarea tareas[10];
 char tarea_activa;
 char slot[10];
+char slot_activo;
+char contador_actualizar_pantalla;
 
 //funcion que imprime el menu
 void menu(){
@@ -29,15 +31,14 @@ kprint("        ej:  cargar c 4  Para cargar programa c en slot 4 \n \n");
 kprint("- Para matar un programa: matar numero_de_slot \n");
 kprint("        ej:  matar 5 \n \n");
 kprint("- Para cambiar quantum: quantum numero_de_slot valor(1-20) \n");
-kprint("        ej:  quantum numero_de_slot 13 \n \n \n");
-//kprint("\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n");
+kprint("        ej:  quantum numero_de_slot 13 \n \n \n\n \n \n \n \n");
+
 }
 
 // funcion que permuta tareas
 void scheduler(){
 	tarea_activa= ((tarea_activa+1 )% 10);
 	while(!(slot[(tarea_activa)% 10]))tarea_activa= ((tarea_activa+1 )% 10);  //vamos a la siguiente tarea si estaba vacia
-	
 	unsigned char gdt_i = (tareas[((tarea_activa)% 10)]).indice_gdt; // Chequeamos en que indice en la gdt esta la proxima tarea
 	
 	// lanzar_tarea ( gdt_i)
@@ -50,7 +51,7 @@ void mostrar_slot(char s){
 	char * b_pantalla;
 	b_pantalla = 0xb8000;
 	for(unsigned int a=0; a< 4000; ++a) {
-		b_pantalla[a]= (tareas[tarea_activa]).pantalla[a];
+		b_pantalla[a]= (tareas[slot_activo]).pantalla[a];
 		}
 }
 
@@ -122,6 +123,13 @@ static void ejecutar ( unsigned long phys_start, unsigned long phys_end, char *c
 }
 
 int timer( struct registers *r ) {
+	//podriamos hacer que permute tareas con un intervalo mas grande que un tick
+	++contador_actualizar_pantalla;
+	if(contador_actualizar_pantalla == 250) { 	//arbitrariamente puse 250 para refrescar la pantalla
+		if(!slot_activo) menu();
+		else mostrar_slot(slot_activo);
+		contador_actualizar_pantalla == 0;
+	}
 	
 	--(tareas[tarea_activa].quantum_actual); 			//decrementamos quantum
 	if (tareas[tarea_activa].quantum_actual==0){		//si termino, reestablecemos y cambiamos a la proxima llamando a scheduler
@@ -138,18 +146,18 @@ int teclado( struct registers *r ) {
 	uint8_t key = inb( 0x60 );
 //  __asm__ __volatile__ ("xchg %bx,%bx");
 if (key==1 || (key >58 && key<69)){				//si entro aca fue para cambiar de slot o al menu
-	if (key ==1) menu(); // Si apreto Esc
-	if (key==59) mostrar_slot(1);
-	if (key==60) mostrar_slot(2);
-	if (key==61) mostrar_slot(3);
-	if (key==62) mostrar_slot(4);
-	if (key==63) mostrar_slot(5);
-	if (key==64) mostrar_slot(6);
-	if (key==65) mostrar_slot(7);
-	if (key==66) mostrar_slot(8);
-	if (key==67) mostrar_slot(9);
-	if (key==68) mostrar_slot(10);
-}else {}								// aca deberis ir algo para que capture lo que se escribe y lo mande en el slot donde esta o menu
+	if (key ==1) {menu(); slot_activo = 0;}// Si apreto Esc
+	if (key==59) {kprint("Pantalla 1"); slot_activo = 1; mostrar_slot(1); }
+	if (key==60) {slot_activo = 2;mostrar_slot(2);}
+	if (key==61) {slot_activo = 3; mostrar_slot(3);}
+	if (key==62) {slot_activo = 4; mostrar_slot(4);}
+	if (key==63) {slot_activo = 5;mostrar_slot(5);}
+	if (key==64) {slot_activo = 6;mostrar_slot(6);}
+	if (key==65) {slot_activo = 7;mostrar_slot(7);}
+	if (key==66) {slot_activo = 8;mostrar_slot(8);}
+	if (key==67) {slot_activo = 9;mostrar_slot(9);}
+	if (key==68) {slot_activo = 10; mostrar_slot(10);}
+}else {	}								// aca deberis ir algo para que capture lo que se escribe y lo mande en el slot donde esta o menu
 
     
 	sti();
@@ -157,8 +165,7 @@ if (key==1 || (key >58 && key<69)){				//si entro aca fue para cambiar de slot o
 }
 
 void kmain(multiboot_info_t*, unsigned int magic ) __noreturn;
-void kmain(multiboot_info_t* mbd, unsigned int magic )
-{
+void kmain(multiboot_info_t* mbd, unsigned int magic ){
     if ( magic != 0x2BADB002 ) {
 		// TODO: Hacer un kputs.
 		kprint ( "Warning: No se inicializo con GRUB, intentando de todas formas.\n" );
@@ -187,13 +194,18 @@ void kmain(multiboot_info_t* mbd, unsigned int magic )
 	tarea_activa =0;
 	
 	//Lanzamos programa para cargar tareas y modificar quantums.
+	contador_actualizar_pantalla = 0;
 	menu();
 	
 
 	set_irq_handler( 0, &timer );
 	set_irq_handler( 1, &teclado );
 	
+	
+	
+	
 	sti();
 
 	while (1);
 }
+
