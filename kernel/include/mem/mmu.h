@@ -89,8 +89,8 @@ uint8_t page_alloc_at_VA( pde_t* pdt, uint32_t va, uint8_t perm );
 
 //A partir de la dirección virtual, obtiene el frame, le decrementa la cuenta de referencia y lo
 //desmapea + invlpg().
-//Valores de retorno:       ->E_SUCCESS
-//                          ->E_INVALID_VA
+//Valores de retorno:       ->E_SUCCESS: si todo sale bien
+//                          ->E_INVALID_VA: si en realidad no habia nada en esa va, osea page_dirwalk devuelve que la ptable no esta
 uint8_t page_free( pde_t *pdt, uint32_t va );
 
 #endif
