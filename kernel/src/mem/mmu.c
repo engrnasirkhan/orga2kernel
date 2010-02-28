@@ -218,7 +218,7 @@ int8_t page_alloc(pde_t *pdt, page_frame_t *page_frame, uint32_t va, uint8_t per
         }
         //Incrementamos la cantidad de referencias
         page_frame->ref_count++;
-        *pte = get_page_frame_KVA(page_frame) | perm;
+        *pte = get_page_frame_KVA(page_frame) | perm | PAGE_PRESENT;
     }
     else
     {
@@ -276,6 +276,20 @@ int8_t page_dirwalk(pde_t *pdt, uint32_t va, pte_t **pte, uint8_t create_page_ta
         {
             return E_PTABLE_NOT_PRESENT;
         }
+    }
+}
+
+//Obtiene un page frame y lo mapea en va.
+uint8_t page_alloc_at_VA(pde_t *pdt, uint32_t va, uint8_t perm )
+{
+    page_frame_t *free_frame = pop_free_frame();
+    if(free_frame != NULL)
+    {
+        return page_alloc(pdt, free_frame, va, perm);
+    }
+    else
+    {
+        return E_NO_MEMORY;
     }
 }
 

@@ -27,10 +27,11 @@
 
 #define GET_BASE_ADDRESS(x) ((x & 0xFFFFF000) >> 12)
 
-//Codigo de errores generales
-#define E_SUCCESS                0X01
+//Codigo de errores generales de las funcioens de la MMU
+#define E_SUCCESS               0X01
 #define E_NO_MEMORY             0x02
 #define E_PTABLE_NOT_PRESENT    0x03
+#define E_INVALID_VA            0x04
 
 typedef struct page_frame
 {
@@ -80,5 +81,10 @@ int8_t page_dirwalk(pde_t *pdt, uint32_t va, pte_t **pte, uint8_t create_page_ta
 
 //Decrementa las referencias del page_frame, y si estas llegan a ser nulas, lo agrega al stack de frames libres
 void page_dealloc(page_frame_t *frame);
+
+//Obtiene un page frame y lo mapea en va.
+//Valores de retorno:   ->E_SUCCESS: si todo salio bien
+//                      ->E_NO_MEMORY: si no había más memoria fisica para realizar la operacion                      
+uint8_t page_alloc_at_VA( pde_t* pdt, uint32_t va, uint8_t perm );
 
 #endif
