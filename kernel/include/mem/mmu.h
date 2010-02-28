@@ -87,4 +87,10 @@ void page_dealloc(page_frame_t *frame);
 //                      ->E_NO_MEMORY: si no había más memoria fisica para realizar la operacion                      
 uint8_t page_alloc_at_VA( pde_t* pdt, uint32_t va, uint8_t perm );
 
+//A partir de la dirección virtual, obtiene el frame, le decrementa la cuenta de referencia y lo
+//desmapea + invlpg().
+//Valores de retorno:       ->E_SUCCESS
+//                          ->E_INVALID_VA
+uint8_t page_free( pde_t *pdt, uint32_t va );
+
 #endif

@@ -41,6 +41,9 @@ extern void setCR4( reg_t cr4 );
 /** @brief Obtiene el contenido del CR4 */
 extern reg_t getCR4();
 
+/** @breif Invalida la TLB para la direccion addr*/
+extern void invlpg(uint32_t addr);
+
 /* Entrada y salida de puertos */
 /*
 extern void outb( uint16_t port, uint8_t value );

@@ -40,6 +40,11 @@ void io_wait() {
 	outb( 0x80, 0x00 ); // Delay como lo hace linux.
 }
 
+void invlpg(uint32_t addr)
+{ 
+	__asm__ __volatile("invlpg (%0)" : : "r" (addr) : "memory");
+}  
+
 /*
 uint8_t inb( uint16_t port ) {
 	__asm__ __volatile__

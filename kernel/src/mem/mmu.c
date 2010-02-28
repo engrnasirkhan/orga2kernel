@@ -293,6 +293,28 @@ uint8_t page_alloc_at_VA(pde_t *pdt, uint32_t va, uint8_t perm )
     }
 }
 
+uint8_t page_free(pde_t *pdt, uint32_t va )
+{
+    //Primero obtenemos la pte para obtener la direccion fisica del frame
+    pte_t *pte;
+    if(page_dirwalk(pdt, va, &pte, 0) == E_SUCCESS)
+    {
+        page_frame_t *frame = get_page_frame_from_PA((uint32_t)GET_BASE_ADDRESS(*pte));
+        page_dealloc(frame);
+        //Invalido la va en la TLB
+        //OJO: invalida la va de la PDT que esta instalada en este momento, cr3!
+        invlpg(va);
+        //Limpio la pte
+        *pte = 0;
+        
+        return E_SUCCESS;
+    }
+    else
+    {
+        return E_INVALID_VA;
+    }
+}
+
 void install_gdt()
 {
 	// Inicializamos la GDT.
