@@ -296,7 +296,7 @@ int8_t page_dirwalk(pde_t *pdt, uint32_t va, pte_t **pte, uint8_t create_page_ta
     if(IS_PRESENT(pdt[pd_offset]))
     {
         //Bien! La page table esta presente
-        pte_t *page_table = (pte_t*)GET_BASE_ADDRESS(pdt[pd_offset]);
+        pte_t *page_table = (pte_t*)PA2KVA(GET_BASE_ADDRESS(pdt[pd_offset]));
         *pte = &page_table[pt_offset];
         return E_SUCCESS;
     }    
