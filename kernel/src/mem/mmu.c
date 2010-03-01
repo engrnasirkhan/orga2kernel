@@ -92,6 +92,8 @@ void init_mem(multiboot_info_t* mbd)
                     {
                         //estas paginas corresponden al kernel
                         mem_page_frames[k].ref_count = 1;
+                        mem_page_frames[k].next      = NULL;
+                        mem_page_frames[k].prev      = NULL;
                     }
                     //actualizamos la cantidad de frames totales en la memoria
                     page_frames_count = k+1;
@@ -166,11 +168,15 @@ void push_free_frame(page_frame_t *page_frame)
     if(free_page_frame_stack == NULL){
         //El stack esta vacio
         free_page_frame_stack = page_frame;
-        page_frame->next = 0;
+        page_frame->next = NULL;
+        page_frame->prev = NULL;
     }
     else
     {
+        //"Reconectamos" los punteros de la lista doblemente enlazada
         page_frame->next = free_page_frame_stack;
+        page_frame->prev = NULL;
+        page_frame->next->prev = page_frame;
         free_page_frame_stack = page_frame;
     }
     free_page_frame_count++;
@@ -183,6 +189,7 @@ page_frame_t* pop_free_frame()
     {
         frame = free_page_frame_stack;
         free_page_frame_stack = frame->next;
+        free_page_frame_stack->prev = NULL;
         frame->next = NULL;
 
         free_page_frame_count--;
@@ -196,12 +203,50 @@ uint32_t get_page_frame_KVA(page_frame_t* frame)
     return ((uint32_t)frame - (uint32_t)mem_page_frames) * PAGESIZE;
 }
 
-page_frame_t* get_page_frame_from_PA(uint32_t physical_address)
+page_frame_t* get_PA_page_frame(uint32_t physical_address)
 {
-    return &mem_page_frames[physical_address / PAGESIZE];
+    uint32_t k = physical_address / PAGESIZE;
+    if( k < page_frames_count)
+    {
+        return &mem_page_frames[k];
+    }
+    else
+    {
+        return NULL;
+    }
 }
 
-int8_t page_alloc(pde_t *pdt, page_frame_t *page_frame, uint32_t va, uint8_t perm)
+page_frame_t* get_page_frame( uint32_t pa )
+{
+    page_frame_t* frame = get_PA_page_frame( pa );
+    if( frame )
+    {
+        if( frame->next != NULL )
+        {
+            frame->next->prev = frame->prev;
+        }       
+        if( frame->prev != NULL )
+        {
+            frame->prev->next = frame->next;
+        }
+        else
+        {
+            //Puede ser el primero de la lista
+            if( free_page_frame_stack == frame )
+            {
+                //era el primero
+                free_page_frame_stack = frame->next;
+            }
+        }
+        //anulo los punteros
+        frame->next = NULL;
+        frame->prev = NULL;
+        frame->ref_count++;
+    }
+    return frame;
+}
+
+int8_t page_alloc(pde_t *pdt, page_frame_t *page_frame, uint32_t va, uint8_t perm, uint8_t force_dealloc)
 {
     uint32_t pd_offset = GET_PD_OFFSET(va);
     uint32_t pt_offset = GET_PT_OFFSET(va);
@@ -213,9 +258,17 @@ int8_t page_alloc(pde_t *pdt, page_frame_t *page_frame, uint32_t va, uint8_t per
         if(*pte != 0)
         {
             //Ya habia un frame asociado a "va"
-            page_frame_t *old_frame = get_page_frame_from_PA(GET_BASE_ADDRESS(*pte));
-            page_dealloc(old_frame);
+            if( force_dealloc)
+            {
+                page_frame_t *old_frame = get_PA_page_frame(GET_BASE_ADDRESS(*pte));
+                page_dealloc(old_frame);
+            }
+            else
+            {
+                return E_INVALID_VA;
+            }
         }
+
         //Incrementamos la cantidad de referencias
         page_frame->ref_count++;
         *pte = get_page_frame_KVA(page_frame) | perm | PAGE_PRESENT;
@@ -280,12 +333,12 @@ int8_t page_dirwalk(pde_t *pdt, uint32_t va, pte_t **pte, uint8_t create_page_ta
 }
 
 //Obtiene un page frame y lo mapea en va.
-uint8_t page_alloc_at_VA(pde_t *pdt, uint32_t va, uint8_t perm )
+uint8_t page_alloc_at_VA(pde_t *pdt, uint32_t va, uint8_t perm, uint8_t force_dealloc )
 {
     page_frame_t *free_frame = pop_free_frame();
     if(free_frame != NULL)
     {
-        return page_alloc(pdt, free_frame, va, perm);
+        return page_alloc(pdt, free_frame, va, perm, force_dealloc);
     }
     else
     {
@@ -299,7 +352,7 @@ uint8_t page_free(pde_t *pdt, uint32_t va )
     pte_t *pte;
     if(page_dirwalk(pdt, va, &pte, 0) == E_SUCCESS)
     {
-        page_frame_t *frame = get_page_frame_from_PA((uint32_t)GET_BASE_ADDRESS(*pte));
+        page_frame_t *frame = get_PA_page_frame((uint32_t)GET_BASE_ADDRESS(*pte));
         page_dealloc(frame);
         //Invalido la va en la TLB
         //OJO: invalida la va de la PDT que esta instalada en este momento, cr3!
@@ -313,6 +366,14 @@ uint8_t page_free(pde_t *pdt, uint32_t va )
     {
         return E_INVALID_VA;
     }
+}
+
+uint8_t page_map_pa2va(pde_t *pdt, uint32_t pa, uint32_t va, uint8_t perm, uint8_t force_dealloc )
+{
+    //Obtengo el page_frame (estuviera libre o no, puede ser que varias va esten mapeadas a un mismo frame)
+    page_frame_t *frame = get_page_frame(pa);
+    
+    return page_alloc(pdt, frame, va, perm, force_dealloc);
 }
 
 void install_gdt()

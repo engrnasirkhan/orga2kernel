@@ -36,6 +36,7 @@
 typedef struct page_frame
 {
    struct page_frame* next; //proximo frame de la lista de frames libres
+   struct page_frame* prev; //frame anterior de la lista de frames libres
    uint32_t ref_count;  //cantidad de referencias externas
 } page_frame_t;
 
@@ -63,13 +64,21 @@ page_frame_t* pop_free_frame();
 uint32_t get_page_frame_KVA(page_frame_t* frame);
 
 //A partir de una direccion fisica, devuelve un puntero al page_frame_t correspondiente en el array mem_page_frames
-//Nota: physical_address deberia ser multiplo de PAGESIZE
-page_frame_t* get_page_frame_from_PA(uint32_t physical_address);
+//No quita al frame de la lista de libres si es que forma parte de dicha lista.
+//Devuelve NULL si la direccion fisica va mas alla de la memoria fisica disponible
+//NOTA: physical_address debe ser multiplo de PAGESIZE
+page_frame_t* get_PA_page_frame(uint32_t physical_address);
+
+//Devuelve el frame correspondiente a la physical address pasada como parametro, quitandolo de la lista de libres si es que estaba libre
+//En caso de que la pa no sea válida, devuelve NULL
+page_frame_t* get_page_frame( uint32_t physical_address );
 
 //Asocia la direccion "va" con el frame "page_frame" en la tabla apuntada por pdt con los permisos "perm"
+//Si la va ya estaba mapeada a otro lado, force_dealloc indica si se debe desalojar (==1) y remapear, o devolver error (==0)
 //Valores de retorno:   ->E_SUCCESS: si se pudo asociar correctamente va con el page_frame
+//                      ->E_INVALID_VA: si la va ya estaba mapeada a otro lado y force_dealloc==0
 //                      ->E_NO_MEMEMORY: si no se pudo completar la operacion
-int8_t page_alloc(pde_t *pdt, page_frame_t *page_frame, uint32_t va, uint8_t perm);
+int8_t page_alloc(pde_t *pdt, page_frame_t *page_frame, uint32_t va, uint8_t perm, uint8_t force_dealloc);
 
 //Recorre las tablas y hace apuntar pte a la page table entry que corresponde a va dentro de pdt
 //En caso de que todo salga bien, devuelve 1 y en pte el puntero a la pte correspondiente
@@ -85,12 +94,18 @@ void page_dealloc(page_frame_t *frame);
 //Obtiene un page frame y lo mapea en va.
 //Valores de retorno:   ->E_SUCCESS: si todo salio bien
 //                      ->E_NO_MEMORY: si no había más memoria fisica para realizar la operacion                      
-uint8_t page_alloc_at_VA( pde_t* pdt, uint32_t va, uint8_t perm );
+uint8_t page_alloc_at_VA( pde_t* pdt, uint32_t va, uint8_t perm, uint8_t force_dealloc );
 
 //A partir de la dirección virtual, obtiene el frame, le decrementa la cuenta de referencia y lo
 //desmapea + invlpg().
 //Valores de retorno:       ->E_SUCCESS: si todo sale bien
 //                          ->E_INVALID_VA: si en realidad no habia nada en esa va, osea page_dirwalk devuelve que la ptable no esta
 uint8_t page_free( pde_t *pdt, uint32_t va );
+
+//Intenta asocia, para la pdt pasada como parámetro, la physical address con la virtual address. "force_dealloc" funciona igual que para page_alloc
+//Valores de retorno:       ->E_SUCCESS: si todo sale bien
+//                          ->E_INVALID_VA: si la virtual address ya esta mapeada a otra direccion fisica (liberarla primero en todo caso con page_free)
+//                          ->E_NO_MEMORY: si no hay mas lugar en memoria fisica para realizar el mapeo
+uint8_t page_map_pa2va(pde_t *pdt, uint32_t pa, uint32_t va, uint8_t perm, uint8_t force_dealloc );
 
 #endif
