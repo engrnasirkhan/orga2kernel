@@ -9,6 +9,8 @@
 #include <kernel/globals.h>
 #include <scheduler/scheduler.h>
 #include <mem/memlayout.h>
+#include <mem/vmm.h>
+#include <lib/string.h>
 
 //funcion que inicializa gran parte de las estructuras del kernel
 extern void kinit ( multiboot_info_t* mbd ) __init;
@@ -197,12 +199,14 @@ void kmain(multiboot_info_t* mbd, unsigned int magic ){
 	contador_actualizar_pantalla = 0;
 	menu();
 	
-
+	//probando kmalloc
+	uint8_t *string = kmalloc(21);
+	strcpy(string, "Probando kmalloc :)\n");
+	kprint("%s", string);
+    kfree(string);
+    
 	set_irq_handler( 0, &timer );
 	set_irq_handler( 1, &teclado );
-	
-	
-	
 	
 	sti();
 
