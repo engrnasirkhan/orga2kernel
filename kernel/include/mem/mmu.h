@@ -82,7 +82,7 @@ page_frame_t* get_page_frame( uint32_t physical_address );
 //Si la va ya estaba mapeada a otro lado, force_dealloc indica si se debe desalojar (==1) y remapear, o devolver error (==0)
 //Valores de retorno:   ->E_MMU_SUCCESS: si se pudo asociar correctamente va con el page_frame
 //                      ->E_MMU_INVALID_VA: si la va ya estaba mapeada a otro lado y force_dealloc==0
-//                      ->E_NO_MEMEMORY: si no se pudo completar la operacion
+//                      ->E_MMU_NO_MEMEMORY: si no se pudo completar la operacion
 int8_t page_alloc(pde_t *pdt, page_frame_t *page_frame, uint32_t va, uint8_t perm, uint8_t force_dealloc);
 
 //Recorre las tablas y hace apuntar pte a la page table entry que corresponde a va dentro de pdt
