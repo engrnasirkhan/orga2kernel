@@ -212,7 +212,7 @@ page_frame_t* pop_free_frame()
 
 uint32_t get_page_frame_PA(page_frame_t* frame)
 {
-    ((uint32_t)frame - (uint32_t)mem_page_frames) * PAGESIZE;
+    return ((uint32_t)frame - (uint32_t)mem_page_frames) * PAGESIZE;
 }
 
 page_frame_t* get_PA_page_frame(uint32_t physical_address)
