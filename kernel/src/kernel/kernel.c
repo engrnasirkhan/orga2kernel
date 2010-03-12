@@ -200,9 +200,9 @@ void kmain(multiboot_info_t* mbd, unsigned int magic ){
 	menu();
 	
 	//probando kmalloc
-	uint8_t *string = kmalloc(21);
+    uint8_t *string = kmalloc(21*sizeof(uint8_t));
 	strcpy(string, "Probando kmalloc :)\n");
-	kprint("%s", string);
+	kprint("%s\n", string);
     kfree(string);
     
 	set_irq_handler( 0, &timer );

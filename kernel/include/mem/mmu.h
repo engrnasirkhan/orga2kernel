@@ -27,7 +27,7 @@
 #define IS_WRITETHROUGH(x)  (x & PAGE_WTHROUGH)
 #define IS_CACHEDISABLED(x) (x & PAGE_CACHEDIS)
 
-#define GET_BASE_ADDRESS(x) ((x & 0xFFFFF000) >> 12)
+#define GET_BASE_ADDRESS(x) (x & 0xFFFFF000)
 
 //Codigo de errores generales de las funcioens de la MMU
 #define E_MMU_SUCCESS               0X01
@@ -119,5 +119,8 @@ pte_t* page_install_page_table(pde_t *pdt, page_frame_t *frame);
 
 //Devuelve cuantos frames quedan libres en memoria fisica
 uint32_t get_free_page_frame_count(); 
+
+//Devuelve la direccion virtual de la tabla de paginas
+pte_t *get_page_table_va(uint32_t page_table_pa);
 
 #endif

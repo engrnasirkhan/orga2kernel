@@ -134,13 +134,11 @@ void init_mem(multiboot_info_t* mbd)
         
     //Ahora tenemos la lista de free_frames llena y conocemos la cantidad total de memoria fisica disponible
     //y sabemos cuantas paginas de 4mb ocupa el kernel, asi que podemos armar las tablas de paginacion!  
-    init_paging(kernel_pages_count);
-    
+    init_paging(kernel_pages_count);  
     //finalmente, ahora podemos poner la gdt definitiva
     install_gdt();
-    
     //incializamos el espacio para el heap del kernel
-    page_alloc_at_VA( (pde_t*)PA2KVA(getCR3()), KERNEL_HEAP_START, PAGE_RW | PAGE_SUPERVISOR, 1 ); //force allocation
+    page_alloc_at_VA( kernel_pdt, KERNEL_HEAP_START, PAGE_RW | PAGE_SUPERVISOR, 1 ); //force allocation
 }
 
 void init_paging(uint32_t kernel_pages_count)
@@ -161,17 +159,18 @@ void init_paging(uint32_t kernel_pages_count)
     page_frame_t *frame = pop_free_frame();
     uint32_t frame_pa = get_page_frame_PA(frame);
     memset((pde_t*)PA2KVA(frame_pa), 0, PAGESIZE);
+    
     //Apuntamos a la page table
     kernel_pdt[GET_PD_OFFSET(KERNEL_PAGING_TABLES_VA)] = frame_pa | PAGE_SUPERVISOR | PAGE_RW | PAGE_PRESENT; 
     pte_t *pte = (pte_t*)PA2KVA(frame_pa);
-    pte[GET_PT_OFFSET(PTPA2KVA(frame_pa))] = frame_pa | PAGE_SUPERVISOR | PAGE_RW | PAGE_PRESENT; 
-
+    pte[0] = frame_pa | PAGE_SUPERVISOR | PAGE_RW | PAGE_PRESENT; 
+    
     //activamos PSE (habilitamos paginacion con pag de 4mb y de 4kb)
     setCR4(getCR4() | 0x00000010);
     //seteamos el cr3
     setCR3(KVA2PA((reg_t)kernel_pdt));
     //leemos cr0
-    setCR0(getCR0() | 0x80000000); //listo!
+    setCR0(getCR0() | 0x80000000); //listo!  
 }
 
 //Agrega page_frame al stack de frames libres. Debe ser llamado cuando ref_count==0
@@ -212,7 +211,7 @@ page_frame_t* pop_free_frame()
 
 uint32_t get_page_frame_PA(page_frame_t* frame)
 {
-    return ((uint32_t)frame - (uint32_t)mem_page_frames) * PAGESIZE;
+    return (((uint32_t)frame - (uint32_t)mem_page_frames) / sizeof(page_frame_t)) * PAGESIZE;
 }
 
 page_frame_t* get_PA_page_frame(uint32_t physical_address)
@@ -306,16 +305,34 @@ void page_dealloc(page_frame_t *frame)
 
 pte_t* page_install_page_table(pde_t *pdt, page_frame_t *frame)
 {
+    static uint32_t i = 1;
+
     uint32_t ptable_pa = get_page_frame_PA(frame);
-    uint32_t ptable_va = PTPA2KVA(ptable_pa);
+    uint32_t ptable_va;
     //obtengo el puntero a la tabla de paginas que mapea a todas las demas (incluida ella misma)
-    pte_t *master_page_table = (pte_t*)PTPA2KVA(GET_BASE_ADDRESS(pdt[GET_PD_OFFSET(KERNEL_PAGING_TABLES_VA)]));
+    pte_t *master_page_table = (pte_t*)KERNEL_PAGING_TABLES_VA;
     //mapeo la nueva tabla de pagina
-    master_page_table[GET_PT_OFFSET(ptable_va)] = ptable_pa | PAGE_SUPERVISOR | PAGE_RW | PAGE_PRESENT;
+    master_page_table[i] = ptable_pa | PAGE_SUPERVISOR | PAGE_RW | PAGE_PRESENT;
+    ptable_va = KERNEL_PAGING_TABLES_VA + (i++ << 12);
     //Ahora que esta mapeada, puedo usar un puntero para limpiarla
     memset((pde_t*)ptable_va, 0, PAGESIZE);
     //devolvemos el puntero
     return (pde_t*)ptable_va;
+}
+
+pte_t *get_page_table_va(uint32_t page_table_pa)
+{
+    pte_t *master_page_table = (pte_t*)KERNEL_PAGING_TABLES_VA;
+    uint32_t i;
+    for(i=1; i<1024 ;i++)
+    {
+        if(GET_BASE_ADDRESS(master_page_table[i]) == page_table_pa)
+        {
+            return KERNEL_PAGING_TABLES_VA + (i++ << 12);
+        }
+    }
+    
+    return NULL;
 }
 
 int8_t page_dirwalk(pde_t *pdt, uint32_t va, pte_t **pte, uint8_t create_page_table)
@@ -325,8 +342,7 @@ int8_t page_dirwalk(pde_t *pdt, uint32_t va, pte_t **pte, uint8_t create_page_ta
     
     if(IS_PRESENT(pdt[pd_offset]))
     {
-        //Bien! La page table esta presente
-        pte_t *page_table = (pte_t*)PA2KVA(GET_BASE_ADDRESS(pdt[pd_offset]));
+        pte_t *page_table = get_page_table_va(GET_BASE_ADDRESS(pdt[pd_offset]));      
         *pte = &page_table[pt_offset];
         return E_MMU_SUCCESS;
     }    
