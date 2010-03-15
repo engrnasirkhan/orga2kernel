@@ -105,6 +105,21 @@ void kputc(const uint8_t c)
 
 void write_char_bios(const uint8_t c)
 {  
+    if(bios_current_row == SCREEN_BIOS_ROWS)
+    {
+        //move up the whole screen
+        int32_t i,j;
+        for(i=0; i<SCREEN_BIOS_ROWS-1; i++)
+        {
+            for(j=0; j<SCREEN_BIOS_COLS; j++)
+            {
+               *(current_screen_pointer + (j + i * SCREEN_BIOS_COLS) * 2) = *(current_screen_pointer + (j + (i+1) * SCREEN_BIOS_COLS) * 2);
+               *(current_screen_pointer + (j + i * SCREEN_BIOS_COLS) * 2 + 1) = *(current_screen_pointer + (j + (i+1) * SCREEN_BIOS_COLS) * 2 + 1); 
+            }
+        }
+        
+        bios_current_row = SCREEN_BIOS_ROWS-1;
+    }
     if(c!='\n')
     {
         //write char
@@ -124,21 +139,7 @@ void write_char_bios(const uint8_t c)
         bios_current_row++;
     }
     
-    if(bios_current_row > SCREEN_BIOS_ROWS)
-    {
-        //move up the whole screen
-        int32_t i,j;
-        for(i=0; i<SCREEN_BIOS_ROWS-1; i++)
-        {
-            for(j=0; j<SCREEN_BIOS_COLS; j++)
-            {
-               *(current_screen_pointer + (j + i * SCREEN_BIOS_COLS) * 2) = *(current_screen_pointer + (j + (i+1) * SCREEN_BIOS_COLS) * 2);
-               *(current_screen_pointer + (j + i * SCREEN_BIOS_COLS) * 2 + 1) = *(current_screen_pointer + (j + (i+1) * SCREEN_BIOS_COLS) * 2 + 1); 
-            }
-        }
-        
-        bios_current_row = SCREEN_BIOS_ROWS-1;
-    }
+
 }
 
 void kclrscreen()

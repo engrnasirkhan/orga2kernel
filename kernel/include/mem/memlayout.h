@@ -14,11 +14,6 @@
 #define KVA2PA(x)   (x - 0x80000000)
 //inversa de KVA2PA
 #define PA2KVA(x)   (x + 0x80000000)
-//transforma una direccion fisica correspondiente a una tabla de pagina a su direccion virtual
-#define PTPA2KVA(x) (((x/KERNEL_PAGESIZE)<<12) + KERNEL_PAGING_TABLES_VA)
-//opuesto a ptpa2kva
-#define KVA2PTPA(x) (((x - KERNEL_PAGING_TABLES_VA)>>12)*KERNEL_PAGESIZE)
-
 
 #define PAGESIZE    0x1000
 

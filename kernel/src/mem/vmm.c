@@ -1,7 +1,6 @@
 #include <asm/asm.h>
 #include <mem/mmu.h>
 #include <mem/vmm.h>
-#include <screen/screen.h>
 
 //Inicio de la lista de memoria libre
 static header_t *base = (header_t*)KERNEL_HEAP_START; 
