@@ -8,6 +8,7 @@
 #include <asm/handlers.h>
 #include <kernel/globals.h>
 #include <scheduler/scheduler.h>
+#include <scheduler/tss.h>
 #include <mem/memlayout.h>
 #include <mem/vmm.h>
 #include <lib/string.h>
@@ -19,7 +20,7 @@ static reg_t mapa_programa[1024] __attribute__ ((aligned (4096)));
 //Creamos array de 10 tareas.
 tarea tareas[10];
 char tarea_activa;
-char slot[10];
+char  slot[10];  // Si la tarea esta ocupada va un 1
 char slot_activo;
 char contador_actualizar_pantalla;
 
@@ -39,13 +40,41 @@ kprint("        ej:  quantum numero_de_slot 13 \n \n \n\n \n \n \n \n");
 
 // funcion que permuta tareas
 void scheduler(){
+	slot[tarea_activa]= 0;
 	tarea_activa= ((tarea_activa+1 )% 10);
-	while(!(slot[(tarea_activa)% 10]))tarea_activa= ((tarea_activa+1 )% 10);  //vamos a la siguiente tarea si estaba vacia
-	unsigned char gdt_i = (tareas[((tarea_activa)% 10)]).indice_gdt; // Chequeamos en que indice en la gdt esta la proxima tarea
+	while(!(slot[(tarea_activa)])) tarea_activa= ((tarea_activa+1 )% 10);  //vamos a la siguiente tarea, para q la q sigue estaba vacia
+	unsigned char gdt_i = (tareas[tarea_activa]).indice_gdt; // Chequeamos en que indice en la gdt esta la proxima tarea
 	
-	// lanzar_tarea ( gdt_i)
+	// lanzar_tarea (gdt_i)  
+	// Aca tendria que estar el jmp a la tarea nueva
 
 	
+}
+
+void crear_tarea(programs_t programa){
+	cli();
+/*
+ * Esta funcion va a tomar un programs_t y apartir de ahi va a crear una tarea.
+ * Lo que debe hacer:
+ * 		Crear tabla de paginas
+ * 		Pedir pagina para tss
+ * 		Llenar tss
+ * 		Pedir paginas para el codigo
+ * 		Copiar de donde estaba al codigo a la(s) nueva(s) pagina(s)
+ * 		Pedir paginas para pila
+ * 		Copiar de donde estaba los datos a la(s) nueva(s) pagina(s)
+ * 		Agregar a la GDT una entrada
+ * 		Modificar las variables correspondientes al scheduler	
+ * 		Asiginar b8000 a el buffer de la pantalla de esta tarea
+*/
+
+//Creamos tabla de pagina
+//pte_t *tabla_pagina = page_install_page_table( , page_frame_t *frame);
+
+
+
+
+	sti();
 }
 
 
@@ -209,6 +238,10 @@ void kmain(multiboot_info_t* mbd, unsigned int magic ){
 	set_irq_handler( 1, &teclado );
 	
 	sti();
+	
+	
+	int a;
+	int * la= kmalloc(a);
 
 	while (1);
 }

@@ -1,7 +1,7 @@
 typedef struct {
     unsigned int quantum_fijo;
 	unsigned int quantum_actual;
-	char pantalla[4000];
+	char *pantalla;
 	unsigned int indice_gdt;
 } tarea;
 
