@@ -1,4 +1,5 @@
 #include <asm/gdt.h>
+#include <screen/screen.h>
 
 struct GDTEntry g_GDT[16] __attribute__ ((aligned (16)));
 
@@ -65,7 +66,7 @@ gdt_address[*cant] = *gdt;
 
 void gdt_print(struct GDTEntry *gdt_address,unsigned int cant){
 	
-	unsigned int *base = gdt_address;
+	uint32_t *base = (uint32_t*)gdt_address;
 	kprint("Tam %u",cant);
 	kprint("\n");
 	for(unsigned int i = 0; i < cant ; ++i){
