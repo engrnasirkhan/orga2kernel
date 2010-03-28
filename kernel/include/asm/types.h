@@ -1,6 +1,9 @@
 #ifndef __TYPES__H__
 #define __TYPES__H__
 
+/* valores */
+#define NULL 0
+
 /* Tipos signados */
 typedef signed char int8_t;
 typedef signed short int16_t;
@@ -12,6 +15,11 @@ typedef unsigned char uint8_t;
 typedef unsigned short uint16_t;
 typedef unsigned int uint32_t;
 typedef unsigned long long int uint64_t;
+
+/* bool type */
+typedef signed int bool;
+#define true 1;
+#define false 0;
 
 typedef uint32_t reg_t;
 typedef void *ptr_t;
