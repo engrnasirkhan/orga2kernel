@@ -328,7 +328,7 @@ pte_t *get_page_table_va(uint32_t page_table_pa)
     {
         if(GET_BASE_ADDRESS(master_page_table[i]) == page_table_pa)
         {
-            return KERNEL_PAGING_TABLES_VA + (i++ << 12);
+            return (pte_t*)KERNEL_PAGING_TABLES_VA + (i++ << 12);
         }
     }
     
