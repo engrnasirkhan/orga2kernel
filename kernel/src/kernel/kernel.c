@@ -7,21 +7,19 @@
 #include <asm/idt.h>
 #include <asm/handlers.h>
 #include <kernel/globals.h>
-#include <scheduler/scheduler.h>
-#include <scheduler/tss.h>
 #include <mem/memlayout.h>
 #include <mem/vmm.h>
 #include <lib/string.h>
+#include <scheduler/scheduler.h>
+
+
+
 
 //funcion que inicializa gran parte de las estructuras del kernel
 extern void kinit ( multiboot_info_t* mbd ) __init;
 static reg_t mapa_programa[1024] __attribute__ ((aligned (4096)));
 
-//VARIABLES GLOBALES RELATIVAS A SCHEDULER
-tarea tareas[10];					//Se almacena informacion referente a cada caterea
-char tarea_activa;					//Numero de tarea en ejecucion (0-9), para no tarea -1
-char tarea_en_pantalla;				//Numero de tarea mostrada por pantalla (0-9), para no tarea -1      
-char contador_actualizar_pantalla;	//Contador que sirve para actualizar buffer de pantalla
+
 
 
 
@@ -177,7 +175,7 @@ void kmain(multiboot_info_t* mbd, unsigned int magic ){
 	
 	
 	//Iniciamos Scheduler
-	  iniciar_scheduler();
+	 iniciar_scheduler();
     
 
   

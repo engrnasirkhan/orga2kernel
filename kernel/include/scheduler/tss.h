@@ -1,4 +1,7 @@
+#ifndef __TSS__H__
+#define __TSS__H__
 
+#include <asm/types.h>
 /*
  * Task State segment.
  */
@@ -78,3 +81,5 @@ typedef struct task_gate {
 				:0;
 } task_gate_t;
 */
+
+#endif // __TSS__H__

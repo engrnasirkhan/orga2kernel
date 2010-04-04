@@ -1,5 +1,15 @@
 #include <scheduler/scheduler.h>
 
+
+#include <asm/types.h>
+#include <asm/asm.h>
+#include <asm/gdt.h>
+//#include <scheduler/tss.h>
+#include <boot/programs.h>
+
+#define limite_nueva_tss 0x67
+
+
 //Funcion que muestra menu
 void menu(){
 	//__asm__ __volatile__ ("xchg %bx,%bx");
@@ -25,7 +35,7 @@ void scheduler(){
 	while(!(tareas[tarea_activa].hay_tarea)) tarea_activa= ((tarea_activa+1 )% 10);
 	
 	//Chequeo indice en la gdt de la proxima tarea a ejecutar
-	char gdt_indice = (tareas[tarea_activa]).indice_gdt;
+	char gdt_indice = offset_gdt_tareas + tarea_activa;
 	
 	//Lanzo proxima tarea (de indice gdt_i en gdt) con RPL 11
 	uint16_t selector_prox = 8*gdt_indice + 3; 
@@ -56,81 +66,6 @@ void matar_tarea(char numero_tarea){
 	sti();
 }
 
-//Funcion para crear una nueva tarea
-void crear_tarea(programs_t programa, char numero_tarea){
-//Esta funcion va a tomar un programs_t, char con el numero donde lo quiere poner y apartir de ahi va a crear una tarea.
-//Esta funcion se debe ejecutar siempre en el contexto del kernel
-
-	cli();
-
-
-//Si ya habia una tarea corriendo en ese slot, la mato ya la reemplazo
-	if(tareas[numero_tarea].hay_tarea) matar_tarea(numero_tarea);
-
-//Creamos nueva tabla de pagina
-	///TODO: Necesito saber la direccion fisica
-
-//Pido pagina para nueva tss (esto lo hago desde el cr3 actual, osea el del kernel)
-	struct tss *nueva_tss = kmalloc(sizeof(struct tss));
-	tareas[numero_tarea].va_tss = nueva_tss;
-	///TODO: Necesito saber la direccion fisica 
-	uint32_t pa_nueva_tss = 0;
-	tareas[numero_tarea].pa_tss = pa_nueva_tss;
-
-//Lleno tss
-	///TODO: Los valores que tengo que completar son:	
-	/* nueva_tss.cr3=	
-	 * nueva_tss.eip =
-	 * nueva_tss.eflags= 
-	 * nueva_tss.ebp=
-	 * nueva_tss.esp=
-	 * nueva_tss.es =
-	 * nueva_tss.cs=
-	 * nueva_tss.ss=
-	 * nueva_tss.ds=
-	 * nueva_tss.fs=
-	 * nueva_tss.gs=
-	 * */
-	
-//Pido pagina para codigo en el contexto de la nueva tarea y la mapeo a la pdt de la tarea en 0x0000
-	char paginas_para_codigo = 2; ///TODO: AVERIGUAR COMO OBTENER CUANTAS
-	#define tam_pagina 2^22  //estoy suponiendo que usamos paginas de 4 mb TODO
-    ///TODO
-
-//Copiar de donde estaba al codigo a la(s) nueva(s) pagina(s)
-	///TODO
-
-
-//Pido pagina para pila en el contexto de la nueva tarea y la mapeo a la pdt de la tarea en 0xF000
-	///TODO
-
-//Agrego una entrada nueva de GDT
-	GDTEntry *gdt = gdt_address;
-	#define limite_nueva_tss 0x67;
-	gdt_fill_tss_segment( gdt[numero_tarea+ offset_gdt_tareas] , pa_nueva_tss , limite_nueva_tss, 11);
- 
-
-//Creo una pagina nueva, en el contexto del kernel, que va a funcionar como buffer de video para la nueva tarea
-//Mapeo la direccion 0xb8000 de la tarea nueva, con la direccion fisica de la pagina que pedi recien
-	
-	//pido pagina para buffer mapeado en kernel
-	void *nuevo_buffer_video = kmalloc(tam_buffer_pantalla);
-	
-	//mapeo 0xb8000, con la direccion fisica de nuevo_buffer_video en nueva pdt
-	///TODO
-	
-
-//Modifico las variables correspondientes al scheduler y tarea
-	
-	tareas[numero_tarea].hay_tarea= 1;
-	tareas[numero_tarea].quantum_fijo = quantum_default;
-	tareas[numero_tarea].quantum_actual = 0;
-	tareas[numero_tarea].pantalla = nuevo_buffer_video;
-
-
-
-	sti();
-}
 
 //Funcion para mostrar un slot en particular
 void mostrar_slot(char s){
@@ -164,6 +99,85 @@ void iniciar_scheduler(){
 	
 	
 
+}
+
+
+
+
+
+//Funcion para crear una nueva tarea
+void crear_tarea(programs_t programa, char numero_tarea){
+//Esta funcion va a tomar un programs_t, char con el numero donde lo quiere poner y apartir de ahi va a crear una tarea.
+//Esta funcion se debe ejecutar siempre en el contexto del kernel
+
+	cli();
+
+
+//Si ya habia una tarea corriendo en ese slot, la mato ya la reemplazo
+	if(tareas[numero_tarea].hay_tarea) matar_tarea(numero_tarea);
+
+//Creamos nueva tabla de pagina
+	///TODO: Necesito saber la direccion fisica
+
+//Pido pagina para nueva tss (esto lo hago desde el cr3 actual, osea el del kernel)
+	struct tss *nueva_tss = kmalloc(sizeof(struct tss));
+	tareas[numero_tarea].va_tss = nueva_tss;
+	///TODO: Necesito saber la direccion fisica 
+	void *pa_nueva_tss = 0;
+	tareas[numero_tarea].pa_tss = pa_nueva_tss;
+
+//Lleno tss
+	///TODO: Los valores que tengo que completar son:	
+	/* nueva_tss.cr3=	
+	 * nueva_tss.eip =
+	 * nueva_tss.eflags= 
+	 * nueva_tss.ebp=
+	 * nueva_tss.esp=
+	 * nueva_tss.es =
+	 * nueva_tss.cs=
+	 * nueva_tss.ss=
+	 * nueva_tss.ds=
+	 * nueva_tss.fs=
+	 * nueva_tss.gs=
+	 * */
+	
+//Pido pagina para codigo en el contexto de la nueva tarea y la mapeo a la pdt de la tarea en 0x0000
+	char paginas_para_codigo = 2; ///TODO: AVERIGUAR COMO OBTENER CUANTAS
+	#define tam_pagina 2^22  //estoy suponiendo que usamos paginas de 4 mb TODO
+    ///TODO
+
+//Copiar de donde estaba al codigo a la(s) nueva(s) pagina(s)
+	///TODO
+
+
+//Pido pagina para pila en el contexto de la nueva tarea y la mapeo a la pdt de la tarea en 0xF000
+	///TODO
+
+//Agrego una entrada nueva de GDT
+	struct GDTEntry *gdt =  (struct GDTEntry*) gdt_address;
+	gdt_fill_tss_segment( &(gdt[numero_tarea+ offset_gdt_tareas]) , pa_nueva_tss , limite_nueva_tss, 11);
+ 
+
+//Creo una pagina nueva, en el contexto del kernel, que va a funcionar como buffer de video para la nueva tarea
+//Mapeo la direccion 0xb8000 de la tarea nueva, con la direccion fisica de la pagina que pedi recien
+	
+	//pido pagina para buffer mapeado en kernel
+	void *nuevo_buffer_video = kmalloc(tam_buffer_pantalla);
+	
+	//mapeo 0xb8000, con la direccion fisica de nuevo_buffer_video en nueva pdt
+	///TODO
+	
+
+//Modifico las variables correspondientes al scheduler y tarea
+	
+	tareas[numero_tarea].hay_tarea= 1;
+	tareas[numero_tarea].quantum_fijo = quantum_default;
+	tareas[numero_tarea].quantum_actual = 0;
+	tareas[numero_tarea].pantalla = nuevo_buffer_video;
+
+
+
+	sti();
 }
 
 
