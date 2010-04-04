@@ -17,74 +17,15 @@
 extern void kinit ( multiboot_info_t* mbd ) __init;
 static reg_t mapa_programa[1024] __attribute__ ((aligned (4096)));
 
-//Creamos array de 10 tareas.
-tarea tareas[10];
-char tarea_activa;
-char  slot[10];  // Si la tarea esta ocupada va un 1
-char slot_activo;
-char contador_actualizar_pantalla;
-
-//funcion que imprime el menu
-void menu(){
-	//__asm__ __volatile__ ("xchg %bx,%bx");
-kclrscreen();
-kprint("Menu miOS: Como operar \n \n \n \n");
-kprint("- Para cargar programa: cargar letra_de_programa numero_de_slot \n");
-kprint("        ej:  cargar c 4  Para cargar programa c en slot 4 \n \n");
-kprint("- Para matar un programa: matar numero_de_slot \n");
-kprint("        ej:  matar 5 \n \n");
-kprint("- Para cambiar quantum: quantum numero_de_slot valor(1-20) \n");
-kprint("        ej:  quantum numero_de_slot 13 \n \n \n\n \n \n \n \n");
-
-}
-
-// funcion que permuta tareas
-void scheduler(){
-	slot[tarea_activa]= 0;
-	tarea_activa= ((tarea_activa+1 )% 10);
-	while(!(slot[(tarea_activa)])) tarea_activa= ((tarea_activa+1 )% 10);  //vamos a la siguiente tarea, para q la q sigue estaba vacia
-	unsigned char gdt_i = (tareas[tarea_activa]).indice_gdt; // Chequeamos en que indice en la gdt esta la proxima tarea
-	
-	// lanzar_tarea (gdt_i)  
-	// Aca tendria que estar el jmp a la tarea nueva
-
-	
-}
-
-void crear_tarea(programs_t programa){
-	cli();
-/*
- * Esta funcion va a tomar un programs_t y apartir de ahi va a crear una tarea.
- * Lo que debe hacer:
- * 		Crear tabla de paginas
- * 		Pedir pagina para tss
- * 		Llenar tss
- * 		Pedir paginas para el codigo
- * 		Copiar de donde estaba al codigo a la(s) nueva(s) pagina(s)
- * 		Pedir paginas para pila
- * 		Copiar de donde estaba los datos a la(s) nueva(s) pagina(s)
- * 		Agregar a la GDT una entrada
- * 		Modificar las variables correspondientes al scheduler	
- * 		Asiginar b8000 a el buffer de la pantalla de esta tarea
-*/
-
-//Creamos tabla de pagina
-//pte_t *tabla_pagina = page_install_page_table( , page_frame_t *frame);
+//VARIABLES GLOBALES RELATIVAS A SCHEDULER
+tarea tareas[10];					//Se almacena informacion referente a cada caterea
+char tarea_activa;					//Numero de tarea en ejecucion (0-9), para no tarea -1
+char tarea_en_pantalla;				//Numero de tarea mostrada por pantalla (0-9), para no tarea -1      
+char contador_actualizar_pantalla;	//Contador que sirve para actualizar buffer de pantalla
 
 
 
 
-	sti();
-}
-
-
-void mostrar_slot(char s){
-	char * b_pantalla;
-	b_pantalla = 0xb8000;
-	for(unsigned int a=0; a< 4000; ++a) {
-		b_pantalla[a]= (tareas[slot_activo]).pantalla[a];
-		}
-}
 
 static void ejecutar ( unsigned long phys_start, unsigned long phys_end, char *cmdline ) {
 	programs_t *p = (programs_t *) phys_start;
@@ -154,46 +95,58 @@ static void ejecutar ( unsigned long phys_start, unsigned long phys_end, char *c
 }
 
 int timer( struct registers *r ) {
-	//podriamos hacer que permute tareas con un intervalo mas grande que un tick
+	#define TIEMPO_ACTUALIZCION 250  //Totalmente arbitrario
+		
+	//Referente a la actualizacion de pantalla activa
 	++contador_actualizar_pantalla;
-	if(contador_actualizar_pantalla == 250) { 	//arbitrariamente puse 250 para refrescar la pantalla
-		if(!slot_activo) menu();
-		else mostrar_slot(slot_activo);
+	if(contador_actualizar_pantalla == TIEMPO_ACTUALIZCION) { 
 		contador_actualizar_pantalla == 0;
+		if( tarea_en_pantalla == -1 ) menu();
+		else mostrar_slot(tarea_en_pantalla);
 	}
 	
-	--(tareas[tarea_activa].quantum_actual); 			//decrementamos quantum
-	if (tareas[tarea_activa].quantum_actual==0){		//si termino, reestablecemos y cambiamos a la proxima llamando a scheduler
-			tareas[tarea_activa].quantum_actual = tareas[tarea_activa].quantum_fijo; // restablecemos quantums
-			scheduler();// llamamos al scheduler
+	
+	//Referente a la decrementacion de quantum de tarea_activa
+	
+	//Decrementamos quantum
+	--(tareas[tarea_activa].quantum_actual); 			
+	
+	//si termino, reestablecemos y cambiamos a la proxima llamando a scheduler
+	if (tareas[tarea_activa].quantum_actual==0){		
+			//Restablecemos quantums gastado
+			tareas[tarea_activa].quantum_actual = tareas[tarea_activa].quantum_fijo; 
+			//Llamamos al scheduler para que elija proxima tarea
+			//scheduler();
 	}
 
 	return 0;
 }
 
 int teclado( struct registers *r ) {
-
 	cli();
+	/*
 	uint8_t key = inb( 0x60 );
 //  __asm__ __volatile__ ("xchg %bx,%bx");
 if (key==1 || (key >58 && key<69)){				//si entro aca fue para cambiar de slot o al menu
-	if (key ==1) {menu(); slot_activo = 0;}// Si apreto Esc
-	if (key==59) {kprint("Pantalla 1"); slot_activo = 1; mostrar_slot(1); }
-	if (key==60) {slot_activo = 2;mostrar_slot(2);}
-	if (key==61) {slot_activo = 3; mostrar_slot(3);}
-	if (key==62) {slot_activo = 4; mostrar_slot(4);}
-	if (key==63) {slot_activo = 5;mostrar_slot(5);}
-	if (key==64) {slot_activo = 6;mostrar_slot(6);}
-	if (key==65) {slot_activo = 7;mostrar_slot(7);}
-	if (key==66) {slot_activo = 8;mostrar_slot(8);}
-	if (key==67) {slot_activo = 9;mostrar_slot(9);}
-	if (key==68) {slot_activo = 10; mostrar_slot(10);}
+	if (key ==1) {menu(); tarea_en_pantalla = -1;}// Si apreto Esc
+	if (key==59) {kprint("Pantalla 1"); tarea_en_pantalla = 0; mostrar_slot(0); }
+	if (key==60) {tarea_en_pantalla = 1;mostrar_slot(1);}
+	if (key==61) {tarea_en_pantalla = 2; mostrar_slot(2);}
+	if (key==62) {tarea_en_pantalla = 3; mostrar_slot(3);}
+	if (key==63) {tarea_en_pantalla = 4;mostrar_slot(4);}
+	if (key==64) {tarea_en_pantalla = 5;mostrar_slot(5);}
+	if (key==65) {tarea_en_pantalla = 6;mostrar_slot(6);}
+	if (key==66) {tarea_en_pantalla = 7;mostrar_slot(7);}
+	if (key==67) {tarea_en_pantalla = 8;mostrar_slot(8);}
+	if (key==68) {tarea_en_pantalla = 9; mostrar_slot(9);}
 }else {	}								// aca deberis ir algo para que capture lo que se escribe y lo mande en el slot donde esta o menu
 
-    
+    */
 	sti();
 	return 0;
 }
+
+
 
 void kmain(multiboot_info_t*, unsigned int magic ) __noreturn;
 void kmain(multiboot_info_t* mbd, unsigned int magic ){
@@ -219,14 +172,15 @@ void kmain(multiboot_info_t* mbd, unsigned int magic ){
 	        ejecutar( mod->mod_start, mod->mod_end, (char *) mod->string );
         }
     }
-
-	//Inicializamos un par de cosas del scheduler que habria que mover a algun lado
-	for (unsigned int i = 0; i <10 ; ++i) slot[i]=0;
-	tarea_activa =0;
+    
+  
 	
-	//Lanzamos programa para cargar tareas y modificar quantums.
-	contador_actualizar_pantalla = 0;
-	menu();
+	
+	//Iniciamos Scheduler
+	  iniciar_scheduler();
+    
+
+  
 	
 	//probando kmalloc
     uint8_t *string = kmalloc(21*sizeof(uint8_t));
