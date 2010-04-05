@@ -19,6 +19,7 @@
 #define PAGE_SUPERVISOR 0x00
 #define PAGE_WTHROUGH   0X08
 #define PAGE_CACHEDIS   0X16
+#define PAGE_4MB        0x80
 
 //Macros para analizar los permisos y direccioens de las PDE y PTE
 #define IS_PRESENT(x)       (x & PAGE_PRESENT)
@@ -26,6 +27,7 @@
 #define IS_USER_PAGE(x)     (x & PAGE_USER)
 #define IS_WRITETHROUGH(x)  (x & PAGE_WTHROUGH)
 #define IS_CACHEDISABLED(x) (x & PAGE_CACHEDIS)
+#define IS_4MB(x)           (x & PAGE_4MB)
 
 #define GET_BASE_ADDRESS(x) (x & 0xFFFFF000)
 
@@ -122,5 +124,16 @@ uint32_t get_free_page_frame_count();
 
 //Devuelve la direccion virtual de la tabla de paginas
 pte_t *get_page_table_va(uint32_t page_table_pa);
+
+//Instala una nueva pdt para una tarea
+//Valores de retorno:   ->E_MMU_SUCCESS: si sale todo bien
+//                      ->E_MMU_NO_MEMORY:  si no hay memoria para realizar la operacion
+uint8_t install_task_pdt(uint32_t *va, uint32_t *pa);
+
+//Toma un frame fisico libre y lo mapea en la primera direccion virtual libre disponible.
+//En va devuelve la dirección virtual y en pa la dirección física.
+//Valores de retorno:   ->E_MMU_SUCCESS
+//                      ->E_MMU_NO_MEMORY
+uint8_t mmu_alloc(uint32_t *pdt, uint32_t *va, uint8_t perm, uint32_t *pa);
 
 #endif

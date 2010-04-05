@@ -425,6 +425,62 @@ uint32_t get_free_page_frame_count()
     return free_page_frame_count;
 } 
 
+uint8_t mmu_alloc(uint32_t *pdt, uint32_t *va, uint8_t perm, uint32_t *pa)
+{
+    //encontremos una va libre
+    uint32_t i = (IS_USER_PAGE(perm))? 0 : (KERNEL_VIRTUAL_START - KERNEL_PHYSICAL_START)/KERNEL_PAGESIZE;
+    uint8_t free_va = false;
+    
+    while(i<1024 && !free_va)
+    {
+        pde_t pde = pdt[i];
+        if(IS_PRESENT(pde) && !IS_4MB(pde))
+        {
+            kprint("A");
+            uint32_t j = 0;
+            pte_t *ptable = get_page_table_va(GET_BASE_ADDRESS(pde));
+            while(j<1024 && !free_va)
+            {
+                pte_t pte = ptable[j];
+                if(!IS_PRESENT(pte))
+                {
+                    *va = i<<22 | j<<12;
+                    free_va = true;
+                }
+                j++;
+            }
+        }
+        else
+        {
+            if(!IS_4MB(pde))
+            {
+                *va = i<<22;
+                free_va = true;
+            }
+        }
+        i++;
+    }
+    
+    if(*va != NULL)
+    {
+        //si pudimos encontrar una va libre
+        page_frame_t *free_frame = pop_free_frame();
+        if(free_frame != NULL)
+        {
+            *pa = get_page_frame_PA(free_frame);
+            return page_alloc(pdt, free_frame, *va, perm, 0);
+        }
+        else
+        {
+            return E_MMU_NO_MEMORY;
+        }
+    }    
+    else
+    {
+        return E_MMU_NO_MEMORY;
+    }
+}
+
 void install_gdt()
 {
 	// Inicializamos la GDT.
@@ -438,4 +494,47 @@ void install_gdt()
 	gdt_fill_data_segment( g_GDT + 4, (void *) 0, 0xFFFFFFFF, 3 ); // Datos usuario
 	// Por lo que entiendo, LGDT puede leer una dirección virtual.
 	lgdt( (void *) ((unsigned long) KVA2PA(g_GDT)) ); // Dirección física
+}
+
+uint8_t install_task_pdt(uint32_t *va, uint32_t *pa)
+{
+    uint32_t task_pdt_va, task_pdt_pa;
+    if(mmu_alloc(kernel_pdt, &task_pdt_va, PAGE_SUPERVISOR|PAGE_PRESENT|PAGE_RW, &task_pdt_pa)==E_MMU_SUCCESS)
+    { 
+        memset((pde_t*)task_pdt_va, 0, PAGESIZE);
+        
+        //Mapeamos el kernel desde 0 hasta 4mb*kernel_pages_count
+        //Y tambien desde 2gb hasta 2gb+4mb*kernel_pages_count para que al inicializar
+        //paginacion y luego cambiar la dummy_gdt por la final, funcione todo correctamente
+        uint32_t i;
+        uint32_t kernel_pages_count = kernel_physical_end / KERNEL_PAGESIZE;
+        if(kernel_physical_end % KERNEL_PAGESIZE)
+        {
+            kernel_pages_count++;
+        }
+        
+        for(i=0; i<kernel_pages_count; i++)
+        {
+            ((pde_t*)task_pdt_va)[i+512]   = ((i*KERNEL_PAGESIZE) << 12) | PAGE_4MB | PAGE_PRESENT | PAGE_SUPERVISOR | PAGE_RW;
+        }
+
+        //armamos la tabla para mapear las futuras tablas de paginacion y asi tenerlas en direcciones separadas
+        uint32_t task_master_ptable_va, task_master_ptable_pa;
+        mmu_alloc(kernel_pdt, &task_master_ptable_va, PAGE_SUPERVISOR|PAGE_PRESENT|PAGE_RW, &task_master_ptable_pa);
+        memset((pde_t*)task_master_ptable_va, 0, PAGESIZE);
+        
+        //Apuntamos a la task_master_ptable
+        ((pde_t*)task_pdt_va)[GET_PD_OFFSET(KERNEL_PAGING_TABLES_VA)] = task_master_ptable_pa | PAGE_SUPERVISOR | PAGE_RW | PAGE_PRESENT; 
+        pte_t *pte = (pte_t*)task_master_ptable_va;
+        pte[0] = task_master_ptable_pa | PAGE_SUPERVISOR | PAGE_RW | PAGE_PRESENT; 
+        
+        *va = task_pdt_va;
+        *pa = task_pdt_pa;
+        
+        return E_MMU_SUCCESS;
+    }
+    else
+    {
+        return E_MMU_NO_MEMORY;
+    }
 }
