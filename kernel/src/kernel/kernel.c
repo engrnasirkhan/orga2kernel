@@ -145,6 +145,11 @@ if (key==1 || (key >58 && key<69)){				//si entro aca fue para cambiar de slot o
 }
 
 
+void pruebatarea(){
+	
+while (1) kprint("Hola");	
+}
+
 
 void kmain(multiboot_info_t*, unsigned int magic ) __noreturn;
 void kmain(multiboot_info_t* mbd, unsigned int magic ){
@@ -178,8 +183,15 @@ void kmain(multiboot_info_t* mbd, unsigned int magic ){
 	 iniciar_scheduler();
     
 
-  
+	programs_t prueba1;
+	prueba1.va_entry = &(pruebatarea);
+	prueba1.va_text = &(pruebatarea);
 	
+	crear_tarea(prueba1,2);
+	
+	
+	
+
 	//probando kmalloc
     uint8_t *string = kmalloc(21*sizeof(uint8_t));
 	strcpy(string, "Probando kmalloc :)\n");
@@ -192,6 +204,7 @@ void kmain(multiboot_info_t* mbd, unsigned int magic ){
 	sti();
 	
 	
+		
 	int a;
 	int * la= kmalloc(a);
 
