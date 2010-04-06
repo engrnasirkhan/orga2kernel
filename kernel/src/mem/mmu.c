@@ -271,6 +271,8 @@ int8_t page_alloc(pde_t *pdt, page_frame_t *page_frame, uint32_t va, uint8_t per
     
     if(page_dirwalk(pdt, va, &pte, 1) == E_MMU_SUCCESS)
     {
+        //El if que sigue es ensalada de fruta. Corregir para hacer un dealloc correcto.
+        /*
         if(*pte != 0)
         {
             //Ya habia un frame asociado a "va"
@@ -284,9 +286,12 @@ int8_t page_alloc(pde_t *pdt, page_frame_t *page_frame, uint32_t va, uint8_t per
                 return E_MMU_INVALID_VA;
             }
         }
+        */
         //Incrementamos la cantidad de referencias
         page_frame->ref_count++;
         *pte = get_page_frame_PA(page_frame) | perm | PAGE_PRESENT;
+
+        return E_MMU_SUCCESS;
     }
     else
     {
@@ -436,7 +441,6 @@ uint8_t mmu_alloc(uint32_t *pdt, uint32_t *va, uint8_t perm, uint32_t *pa)
         pde_t pde = pdt[i];
         if(IS_PRESENT(pde) && !IS_4MB(pde))
         {
-            kprint("A");
             uint32_t j = 0;
             pte_t *ptable = get_page_table_va(GET_BASE_ADDRESS(pde));
             while(j<1024 && !free_va)
@@ -460,8 +464,8 @@ uint8_t mmu_alloc(uint32_t *pdt, uint32_t *va, uint8_t perm, uint32_t *pa)
         }
         i++;
     }
-    
-    if(*va != NULL)
+
+    if(free_va)
     {
         //si pudimos encontrar una va libre
         page_frame_t *free_frame = pop_free_frame();

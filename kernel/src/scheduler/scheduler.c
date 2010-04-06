@@ -116,16 +116,17 @@ void crear_tarea(programs_t programa, char numero_tarea){
 	if(tareas[numero_tarea].hay_tarea) matar_tarea(numero_tarea);
 
 //Creamos nuevo directorio tabla de pagina
-	uint32_t *fisica_dtp;
-    uint32_t *virtual_dtp;
-    if ((install_task_pdt(virtual_dtp,fisica_dtp)) == E_MMU_NO_MEMORY) kprint("Error al crear Tabla de Paginas ");
-    
+	
+	uint32_t fisica_dtp;
+    uint32_t virtual_dtp;
+    if ((install_task_pdt(&virtual_dtp,&fisica_dtp)) == E_MMU_NO_MEMORY) kprint("Error al crear Tabla de Paginas ");
+
 
 //Pido pagina para nueva tss (esto lo hago desde la pdt del kernel)
-	uint32_t *fisica_tss;
-    uint32_t *virtual_tss;
+	uint32_t fisica_tss;
+    uint32_t virtual_tss;
     uint8_t perm = 0; ///TODO: Que es esto?
-	if ((mmu_alloc( getCR3() , virtual_tss, perm , fisica_tss)) == E_MMU_NO_MEMORY) kprint("Error al crear TSS nueva tarea");
+	if ((mmu_alloc( getCR3() , &virtual_tss, perm , &fisica_tss)) == E_MMU_NO_MEMORY) kprint("Error al crear TSS nueva tarea");
 	tareas[numero_tarea].va_tss = virtual_tss;
 	tareas[numero_tarea].pa_tss = fisica_tss;
 	struct tss *nueva_tss = virtual_tss;
@@ -134,9 +135,9 @@ void crear_tarea(programs_t programa, char numero_tarea){
 	///TODO: Hasta ahora solo agarra una pagina para el codigo
 	//char paginas_para_codigo = 2; ///TODO: AVERIGUAR COMO OBTENER CUANTAS
 	//#define tam_pagina 2^22  //estoy suponiendo que usamos paginas de 4 mb TODO
-	uint32_t *virtual_codigo;
-	uint32_t *fisica_codigo;
-    if ((mmu_alloc(virtual_dtp, virtual_codigo, perm, fisica_codigo)) == E_MMU_NO_MEMORY) kprint("Error pedir pag codigo nueva tarea");
+	uint32_t virtual_codigo;
+	uint32_t fisica_codigo;
+    if ((mmu_alloc((uint32_t *)virtual_dtp, &virtual_codigo, perm, &fisica_codigo)) == E_MMU_NO_MEMORY) kprint("Error pedir pag codigo nueva tarea");
 
 //Copiar de donde estaba al codigo a la(s) nueva(s) pagina(s)
 	///TODO: 
@@ -144,16 +145,16 @@ void crear_tarea(programs_t programa, char numero_tarea){
 
 
 //Pido pagina para pila en el contexto de la nueva tarea y la mapeo a la pdt de la tarea 
-	uint32_t *virtual_pila;
-	uint32_t *fisica_pila;
-	if ((mmu_alloc(virtual_dtp, virtual_pila, perm, fisica_pila))== E_MMU_NO_MEMORY) kprint("Error pedir pag pila nueva tarea");
+	uint32_t virtual_pila;
+	uint32_t fisica_pila;
+	if ((mmu_alloc((uint32_t *)virtual_dtp, &virtual_pila, perm, &fisica_pila))== E_MMU_NO_MEMORY) kprint("Error pedir pag pila nueva tarea");
 
 
 //Agrego una entrada nueva de GDT
 	gdt_fill_tss_segment( &(g_GDT[numero_tarea+ offset_gdt_tareas]) , fisica_tss , limite_nueva_tss, 11);
  
 //Lleno tss
-	nueva_tss->cr3=	*fisica_dtp;
+	nueva_tss->cr3=	fisica_dtp;
 	nueva_tss->eip =  virtual_codigo; 	// A donde mapeamos la primer pagina de codigo
 	nueva_tss->eflags= 0x296;	//Por poner alguno valido
 	nueva_tss->ebp= virtual_pila;
