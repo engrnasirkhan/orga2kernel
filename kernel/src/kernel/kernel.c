@@ -178,9 +178,19 @@ void kmain(multiboot_info_t* mbd, unsigned int magic ){
     
   
 	
-	
 	//Iniciamos Scheduler
-	 iniciar_scheduler();
+
+
+	//probando kmalloc
+    uint8_t *string = kmalloc(21*sizeof(uint8_t));
+	strcpy(string, "Probando kmalloc :)\n");
+	kprint("%s\n", string);
+    kfree(string);
+    
+	set_irq_handler( 0, &timer );
+	set_irq_handler( 1, &teclado );
+	
+	iniciar_scheduler();
     
 
 	programs_t prueba1;
@@ -191,15 +201,7 @@ void kmain(multiboot_info_t* mbd, unsigned int magic ){
 	
 	
 	
-
-	//probando kmalloc
-    uint8_t *string = kmalloc(21*sizeof(uint8_t));
-	strcpy(string, "Probando kmalloc :)\n");
-	kprint("%s\n", string);
-    kfree(string);
-    
-	set_irq_handler( 0, &timer );
-	set_irq_handler( 1, &teclado );
+	
 	
 	sti();
 	

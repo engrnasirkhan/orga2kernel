@@ -11,6 +11,10 @@
 
 #define limite_nueva_tss 0x67
 
+void pruebaFuncion(){
+ while(1) kprint(" Funciona ");	
+}
+
 
 //Funcion que muestra menu
 void menu(){
@@ -125,8 +129,8 @@ void crear_tarea(programs_t programa, char numero_tarea){
 //Pido pagina para nueva tss (esto lo hago desde la pdt del kernel)
 	uint32_t fisica_tss;
     uint32_t virtual_tss;
-    uint8_t perm = 0; ///TODO: Que es esto?
-	if ((mmu_alloc( getCR3() , &virtual_tss, perm , &fisica_tss)) == E_MMU_NO_MEMORY) kprint("Error al crear TSS nueva tarea");
+    uint8_t perm = 2; 
+	if ((mmu_alloc( PA2KVA(getCR3()) , &virtual_tss, perm , &fisica_tss)) == E_MMU_NO_MEMORY) kprint("Error al crear TSS nueva tarea");
 	tareas[numero_tarea].va_tss = virtual_tss;
 	tareas[numero_tarea].pa_tss = fisica_tss;
 	struct tss *nueva_tss = virtual_tss;
@@ -138,6 +142,8 @@ void crear_tarea(programs_t programa, char numero_tarea){
 	uint32_t virtual_codigo;
 	uint32_t fisica_codigo;
     if ((mmu_alloc((uint32_t *)virtual_dtp, &virtual_codigo, perm, &fisica_codigo)) == E_MMU_NO_MEMORY) kprint("Error pedir pag codigo nueva tarea");
+
+
 
 //Copiar de donde estaba al codigo a la(s) nueva(s) pagina(s)
 	///TODO: 
@@ -155,7 +161,8 @@ void crear_tarea(programs_t programa, char numero_tarea){
  
 //Lleno tss
 	nueva_tss->cr3=	fisica_dtp;
-	nueva_tss->eip =  virtual_codigo; 	// A donde mapeamos la primer pagina de codigo
+	
+	nueva_tss->eip =  virtual_codigo;///TODO: Esto podria no ser cierto, podria tener otro entry point
 	nueva_tss->eflags= 0x296;	//Por poner alguno valido
 	nueva_tss->ebp= virtual_pila;
 	nueva_tss->esp= virtual_pila;
@@ -173,7 +180,7 @@ void crear_tarea(programs_t programa, char numero_tarea){
 	//Pido pagina para buffer mapeado en kernel, la pido con mmu_alloc para tener tambien la fisica
 	uint32_t virtual_video_kernel;
 	uint32_t fisica_video_kernel;
-	if ((mmu_alloc( getCR3(), virtual_video_kernel, perm, fisica_video_kernel))== E_MMU_NO_MEMORY) kprint("Error pedir pag buffer video nueva tarea");
+	if ((mmu_alloc( PA2KVA(getCR3()), &virtual_video_kernel, perm, &fisica_video_kernel))== E_MMU_NO_MEMORY) kprint("Error pedir pag buffer video nueva tarea");
 	
 	
 	//mapeo 0xb8000, con la direccion fisica de nuevo_buffer_video en nueva pdt
