@@ -148,7 +148,7 @@ void crear_tarea(programs_t programa, char numero_tarea){
 //Copiar de donde estaba al codigo a la(s) nueva(s) pagina(s)
 	///TODO: 
 	//Ver esta linea!
-	if( (page_map_pa2va(PA2KVA(getCR3()) , fisica_codigo,0xFAAA,PAGE_USER,1))==E_MMU_SUCCESS) kprint("Error page_map_pa2va  1 ");
+	if( (page_map_pa2va(PA2KVA(getCR3()) , fisica_codigo,0x10000000,PAGE_USER|PAGE_RW|PAGE_PRESENT, 1))==E_MMU_NO_MEMORY) kprint("Error page_map_pa2va  1 ");
 	
 	//for(int a=0;
 
