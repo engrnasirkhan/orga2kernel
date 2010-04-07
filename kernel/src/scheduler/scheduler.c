@@ -147,7 +147,10 @@ void crear_tarea(programs_t programa, char numero_tarea){
 
 //Copiar de donde estaba al codigo a la(s) nueva(s) pagina(s)
 	///TODO: 
+	//Ver esta linea!
+	if( (page_map_pa2va(PA2KVA(getCR3()) , fisica_codigo,0xFAAA,PAGE_USER,1))==E_MMU_SUCCESS) kprint("Error page_map_pa2va  1 ");
 	
+	//for(int a=0;
 
 
 //Pido pagina para pila en el contexto de la nueva tarea y la mapeo a la pdt de la tarea 
@@ -184,11 +187,15 @@ void crear_tarea(programs_t programa, char numero_tarea){
 	
 	
 	//mapeo 0xb8000, con la direccion fisica de nuevo_buffer_video en nueva pdt
-	pte_t *entrada;
-	page_dirwalk( virtual_dtp, 0xb8000, &entrada, 1 );
-	*entrada = fisica_video_kernel | PAGE_PRESENT | PAGE_RW;
-	invlpg( 0xb8000 );
 	
+//	pte_t *entrada;
+//page_dirwalk( virtual_dtp, 0xb8000, &entrada, 1 );
+//	*entrada = fisica_video_kernel | PAGE_PRESENT | PAGE_RW;
+//	invlpg( 0xb8000 );
+	
+
+
+if( (page_map_pa2va(virtual_dtp, fisica_video_kernel,0xb8000,PAGE_USER,1))!=E_MMU_SUCCESS) kprint("Error page_map_pa2va");
 
 //Modifico las variables correspondientes al scheduler y tarea
 	
