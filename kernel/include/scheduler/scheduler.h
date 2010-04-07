@@ -7,10 +7,9 @@
 #include <scheduler/tss.h>
 #include <boot/programs.h>
 
-#define offset_gdt_tareas 6
+#define offset_gdt_tareas 10
 #define tam_buffer_pantalla 8000
 #define quantum_default 1000;
-#define gdt_address 0x1234  /// TODO: PONER CORRECTA
 
 typedef struct {
 	char hay_tarea;						//1 si hay una tarea mapeada

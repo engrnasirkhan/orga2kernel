@@ -48,7 +48,7 @@ void scheduler(){
 	
 	///TODO: Hacer lo de abajo, nose como.
 	//__asm__ __volatile__ ("jmp selector_prox:00");
-	
+	//probando asm("jmp 0x1000");
 	
 	
 }
@@ -136,9 +136,7 @@ void crear_tarea(programs_t programa, char numero_tarea){
 	struct tss *nueva_tss = virtual_tss;
 	
 //Pido pagina para codigo en el contexto de la nueva tarea y la mapeo a la pdt nueva
-	///TODO: Hasta ahora solo agarra una pagina para el codigo
-	//char paginas_para_codigo = 2; ///TODO: AVERIGUAR COMO OBTENER CUANTAS
-	//#define tam_pagina 2^22  //estoy suponiendo que usamos paginas de 4 mb TODO
+	///TODO: Hasta ahora solo agarra una pagina para el codigo, habria que agarrar las que hagan falta.
 	uint32_t virtual_codigo;
 	uint32_t fisica_codigo;
     if ((mmu_alloc((uint32_t *)virtual_dtp, &virtual_codigo, perm, &fisica_codigo)) == E_MMU_NO_MEMORY) kprint("Error pedir pag codigo nueva tarea");
@@ -147,11 +145,15 @@ void crear_tarea(programs_t programa, char numero_tarea){
 
 //Copiar de donde estaba al codigo a la(s) nueva(s) pagina(s)
 	///TODO: 
-	//Ver esta linea!
-	if( (page_map_pa2va(PA2KVA(getCR3()) , fisica_codigo,0x10000000,PAGE_USER|PAGE_RW|PAGE_PRESENT, 1))==E_MMU_NO_MEMORY) kprint("Error page_map_pa2va  1 ");
+	/*
+	 * Aca estaba probando algo q no va
+	uint32_t *aFisicaDeprograma =0x10000000;
 	
-	//for(int a=0;
-
+	if( (page_map_pa2va(PA2KVA(getCR3()) , fisica_codigo,aFisicaDeprograma,PAGE_USER|PAGE_RW|PAGE_PRESENT, 1))==E_MMU_NO_MEMORY) kprint("Error page_map_pa2va  1 ");
+	
+	uint32_t *pro = &(pruebaFuncion);
+	for(int a=0; a<1024;a++) aFisicaDeprograma[a] = pro[a];
+	*/
 
 //Pido pagina para pila en el contexto de la nueva tarea y la mapeo a la pdt de la tarea 
 	uint32_t virtual_pila;
@@ -187,16 +189,8 @@ void crear_tarea(programs_t programa, char numero_tarea){
 	
 	
 	//mapeo 0xb8000, con la direccion fisica de nuevo_buffer_video en nueva pdt
+	if( (page_map_pa2va(virtual_dtp, fisica_video_kernel,0xb8000,PAGE_USER,1))!=E_MMU_SUCCESS) kprint("Error page_map_pa2va");
 	
-//	pte_t *entrada;
-//page_dirwalk( virtual_dtp, 0xb8000, &entrada, 1 );
-//	*entrada = fisica_video_kernel | PAGE_PRESENT | PAGE_RW;
-//	invlpg( 0xb8000 );
-	
-
-
-if( (page_map_pa2va(virtual_dtp, fisica_video_kernel,0xb8000,PAGE_USER,1))!=E_MMU_SUCCESS) kprint("Error page_map_pa2va");
-
 //Modifico las variables correspondientes al scheduler y tarea
 	
 	tareas[numero_tarea].hay_tarea= 1;
