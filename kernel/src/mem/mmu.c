@@ -60,14 +60,13 @@ void init_mem(multiboot_info_t* mbd)
             mmap = (memory_map_t *) ((unsigned long) mmap
                                      + mmap->size + sizeof (mmap->size)))
         {
-/*
             kprint("  Size = 0x%x, Base_Address = 0x%x,"
                    " Length = 0x%x, Type = 0x%x\n",
                    mmap->size,
                    mmap->base_addr_low,
                    mmap->length_low,
                    mmap->type);
-*/            
+
             //Solo vamos a administrar las partes reservadas para el SO
             //El resto esta reservado para el bios y otras cosas.
             if(mmap->type == 0x01)

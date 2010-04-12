@@ -37,20 +37,27 @@ kprint("        ej:  quantum numero_de_slot 13 \n \n \n\n \n \n \n \n");
 //Funcion de scheduler
 void scheduler(){	
 	//Paso a la siguiente potencialmente ejecutable tarea
-	tarea_activa= ((tarea_activa+1 )% 10);
-	while(!(tareas[tarea_activa].hay_tarea)) tarea_activa= ((tarea_activa+1 )% 10);
+	do {
+		tarea_activa = (tarea_activa + 1) % 10;	
+	} while ( !tareas[tarea_activa].hay_tarea );
 	
 	//Chequeo indice en la gdt de la proxima tarea a ejecutar
 	char gdt_indice = offset_gdt_tareas + tarea_activa;
 	
 	//Lanzo proxima tarea (de indice gdt_i en gdt) con RPL 11
-	uint16_t selector_prox = 8*gdt_indice + 3; 
+	//uint16_t selector_prox = (gdt_indice << 3) | 3;
+	uint16_t selector_prox = (gdt_indice << 3) | 0; // TODO: Usar el de arriba.
 	
+	kprint( "Saltando a tarea: %d, %d, %x\n", tarea_activa, gdt_indice, selector_prox );
 	///TODO: Hacer lo de abajo, nose como.
 	//__asm__ __volatile__ ("jmp selector_prox:00");
 	//probando asm("jmp 0x1000");
-	
-	
+	__asm__ __volatile__ (
+		"pushl %0\n\t"
+		"pushl $0\n\t"
+		"ljmp *(%%esp)"
+		: : "rm"(selector_prox)
+	);
 }
 
 //Funcion para matar tarea
@@ -87,6 +94,17 @@ void mostrar_slot(char s){
 //Funcion para iniciar todo lo relativo al scheduler
 void iniciar_scheduler(){
 
+	// Creamos el TSS inicial para el kernel
+	uint32_t virtual, fisica;
+	reg_t seg;
+	if ( mmu_alloc( PA2KVA(getCR3()), &virtual, PAGE_PRESENT | PAGE_RW | PAGE_SUPERVISOR, &fisica ) == E_MMU_NO_MEMORY )
+		panic( "No se pudo crear el TSS inicial." );
+	gdt_fill_tss_segment( g_GDT + 5, virtual, 0x67, 0 ); 
+	seg = 5<<3;
+	__asm__ __volatile__ (
+		"movw $5<<3, %%ax\n\t"
+		"ltrw %%ax"
+		: : : "ax" );
 	
 	//Pongo como no hay_tarea, para cada tarea
 	for(char i=0; i<10; ++i) tareas[i].hay_tarea = 0;
@@ -102,9 +120,6 @@ void iniciar_scheduler(){
 	
 	//Lanzamos programa menu
 	menu();
-	
-	
-
 }
 
 
@@ -133,7 +148,7 @@ void crear_tarea(programs_t programa, char numero_tarea){
 	if ((mmu_alloc( PA2KVA(getCR3()) , &virtual_tss, perm , &fisica_tss)) == E_MMU_NO_MEMORY) kprint("Error al crear TSS nueva tarea");
 	tareas[numero_tarea].va_tss = virtual_tss;
 	tareas[numero_tarea].pa_tss = fisica_tss;
-	struct tss *nueva_tss = virtual_tss;
+	struct tss *nueva_tss = (struct tss *) virtual_tss;
 	
 //Pido pagina para codigo en el contexto de la nueva tarea y la mapeo a la pdt nueva
 	///TODO: Hasta ahora solo agarra una pagina para el codigo, habria que agarrar las que hagan falta.
@@ -162,21 +177,25 @@ void crear_tarea(programs_t programa, char numero_tarea){
 
 
 //Agrego una entrada nueva de GDT
-	gdt_fill_tss_segment( &(g_GDT[numero_tarea+ offset_gdt_tareas]) , fisica_tss , limite_nueva_tss, 11);
+	gdt_fill_tss_segment( &(g_GDT[numero_tarea+ offset_gdt_tareas]) , virtual_tss , limite_nueva_tss, 3);
  
 //Lleno tss
 	nueva_tss->cr3=	fisica_dtp;
-	
+
+/*#define USER_CS 0x1B
+#define USER_DS 0x23*/
+#define USER_CS 0x08
+#define USER_DS 0x10
 	nueva_tss->eip =  virtual_codigo;///TODO: Esto podria no ser cierto, podria tener otro entry point
-	nueva_tss->eflags= 0x296;	//Por poner alguno valido
+	nueva_tss->eflags= 0x296; //Por poner alguno valido ( NOTE: IF ).
 	nueva_tss->ebp= virtual_pila;
 	nueva_tss->esp= virtual_pila;
-	nueva_tss->es = 0x0023;  //datos nivel 3
-	nueva_tss->cs= 0x1B; //codigo nivel 3
-	nueva_tss->ss= 0x23;
-	nueva_tss->ds= 0x23;
-	nueva_tss->fs= 0x23;
-	nueva_tss->gs= 0x23;
+	nueva_tss->cs= USER_CS;
+	nueva_tss->ds= USER_DS;
+	nueva_tss->es= USER_DS;
+	nueva_tss->ss= USER_DS;
+	nueva_tss->fs= USER_DS;
+	nueva_tss->gs= USER_DS;
 	
 	
 //Creo una pagina nueva, en el contexto del kernel, que va a funcionar como buffer de video para la nueva tarea
@@ -199,7 +218,7 @@ void crear_tarea(programs_t programa, char numero_tarea){
 	tareas[numero_tarea].pantalla = virtual_video_kernel;
 
 
-
+	if (tarea_activa < 0) scheduler();
 	sti();
 }
 

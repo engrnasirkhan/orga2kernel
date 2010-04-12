@@ -27,6 +27,18 @@ void kinit ( multiboot_info_t* mbd ) {
 	set_screen_pointer ( (uint8_t *) PA2KVA(0x000b8000) );
 	kclrscreen();
 
+	// TODO: Copiamos los módulos bien lejos del kernel
+	/*if ( mbd->flags & 8 ) {
+		module_t *m;
+		unsigned long i;
+
+		for ( i = 0, mod = (module_t *) mbd->mods_addr;
+			i < mbd->mods_count;
+			i++, mod++ ) {
+			unsigned long inicio = mod->mod_start, fin = mod->mod_end;
+		}
+	}*/
+
 	// Inicializamos la pila.
 	// NOTA: No creo que haga falta inicializar la pila
 	// de momento apunta a 640KB sin utilizar la memoria virtual

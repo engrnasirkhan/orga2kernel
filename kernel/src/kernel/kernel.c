@@ -96,25 +96,24 @@ int timer( struct registers *r ) {
 	#define TIEMPO_ACTUALIZCION 250  //Totalmente arbitrario
 		
 	//Referente a la actualizacion de pantalla activa
-	++contador_actualizar_pantalla;
+	/*++contador_actualizar_pantalla;
 	if(contador_actualizar_pantalla == TIEMPO_ACTUALIZCION) { 
 		contador_actualizar_pantalla == 0;
 		if( tarea_en_pantalla == -1 ) menu();
 		else mostrar_slot(tarea_en_pantalla);
-	}
+	}*/
 	
 	
 	//Referente a la decrementacion de quantum de tarea_activa
-	
 	//Decrementamos quantum
-	--(tareas[tarea_activa].quantum_actual); 			
+	--tareas[tarea_activa].quantum_actual;
 	
 	//si termino, reestablecemos y cambiamos a la proxima llamando a scheduler
 	if (tareas[tarea_activa].quantum_actual==0){		
 			//Restablecemos quantums gastado
 			tareas[tarea_activa].quantum_actual = tareas[tarea_activa].quantum_fijo; 
 			//Llamamos al scheduler para que elija proxima tarea
-			//scheduler();
+			scheduler();
 	}
 
 	return 0;
@@ -144,10 +143,26 @@ if (key==1 || (key >58 && key<69)){				//si entro aca fue para cambiar de slot o
 	return 0;
 }
 
+int pf( struct registers *r ) {
+	cli();
+	kprint( r->errcode & 1 ? "Page not present\n" : "Page present\n" );	
+	kprint( r->errcode & 2 ? "Write error\n" : "Read error\n" );
+	kprint( r->errcode & 4 ? "User mode\n" : "Supervisor mode\n" );	
+	kprint( r->errcode & 8 ? "Reserved bits en 1 en PD\n" : "Reserved bits en 0 en PD\n" );	
+	kprint( r->errcode & 16 ? "Instruction Fetch\n" : "No fue Instruction Fetch\n" );	
+	kprint( "CR2: 0x%x\nDir: 0x%x:0x%x\n",
+		getCR2(),
+		r->cs, r->eip );
+	for (;;) __asm__ __volatile__ ( "hlt" );
+}
 
 void pruebatarea(){
 	
-while (1) kprint("Hola");	
+while (1) kprint("HOLA");	
+}
+
+void pruebatarea2() {
+	for(;;) kprint("chau");
 }
 
 
@@ -176,40 +191,25 @@ void kmain(multiboot_info_t* mbd, unsigned int magic ){
         }
     }
     
-  
-	
-	//Iniciamos Scheduler
-
-
-	//probando kmalloc
-    uint8_t *string = kmalloc(21*sizeof(uint8_t));
-	strcpy(string, "Probando kmalloc :)\n");
-	kprint("%s\n", string);
-    kfree(string);
-    
 	set_irq_handler( 0, &timer );
 	set_irq_handler( 1, &teclado );
-	
+	set_isr_handler( 14, &pf ); // #PF
+
+	//Iniciamos Scheduler
 	iniciar_scheduler();
-    
 
 	programs_t prueba1;
 	prueba1.va_entry = &(pruebatarea);
 	prueba1.va_text = &(pruebatarea);
 	
-	crear_tarea(prueba1,2);
+	programs_t prueba2;
+	prueba2.va_entry = &pruebatarea2;
+	prueba2.va_text = &pruebatarea2;
 	
-	
-	
-	
+	crear_tarea(prueba1,0);
+	crear_tarea(prueba2,1);
 	
 	sti();
-	
-	
-		
-	int a;
-	int * la= kmalloc(a);
-
-	while (1);
+	for (;;) __asm__ __volatile__ ( "hlt" );
 }
 

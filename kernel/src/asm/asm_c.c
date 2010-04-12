@@ -36,6 +36,12 @@ reg_t getCR4() {
 	return cr4;
 }
 
+reg_t getCR2() {
+	reg_t cr2;
+	__asm__ __volatile__ ( "movl %%cr2, %0" : "=r"(cr2) );
+	return cr2;
+}
+
 void io_wait() {
 	outb( 0x80, 0x00 ); // Delay como lo hace linux.
 }

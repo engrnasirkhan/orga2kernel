@@ -45,7 +45,7 @@ SOURCES = $(foreach i, $(DIRS), $(wildcard $(i)/*.c $(i)/*.cpp $(i)/*.S $(i)/*.s
 OBJS = $(addprefix .obj/, $(addsuffix .o, $(basename $(SOURCES))) $(addsuffix .o, $(basename $(SRCS))))
 OBJSDIRS = $(sort $(dir $(OBJS)))
 
-.PHONY: all clean disk kernel
+.PHONY: all clean disk kernel ctags
 all: $(DISQUETTE)
 
 kernel: $(TARGET)
@@ -61,3 +61,6 @@ $(OBJSDIRS):
 
 clean:
 	rm -rf $(OBJS)
+
+ctags:
+	ctags $(SOURCES)
