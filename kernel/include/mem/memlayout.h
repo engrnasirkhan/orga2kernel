@@ -11,9 +11,9 @@
 #define KERNEL_PAGING_TABLES_VA     0xF0000000
 
 //transforma una direccion virtual del kernel en una direccion fisica
-#define KVA2PA(x)   (x - 0x80000000)
+#define KVA2PA(x)   ((x) - 0x80000000)
 //inversa de KVA2PA
-#define PA2KVA(x)   (x + 0x80000000)
+#define PA2KVA(x)   ((x) + 0x80000000)
 
 #define PAGESIZE    0x1000
 

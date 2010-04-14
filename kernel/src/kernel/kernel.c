@@ -145,7 +145,7 @@ if (key==1 || (key >58 && key<69)){				//si entro aca fue para cambiar de slot o
 
 int pf( struct registers *r ) {
 	cli();
-	kprint( r->errcode & 1 ? "Page not present\n" : "Page present\n" );	
+	kprint( r->errcode & 1 ? "Page level protection\n" : "Page not present\n" );	
 	kprint( r->errcode & 2 ? "Write error\n" : "Read error\n" );
 	kprint( r->errcode & 4 ? "User mode\n" : "Supervisor mode\n" );	
 	kprint( r->errcode & 8 ? "Reserved bits en 1 en PD\n" : "Reserved bits en 0 en PD\n" );	
@@ -207,7 +207,7 @@ void kmain(multiboot_info_t* mbd, unsigned int magic ){
 	prueba2.va_text = &pruebatarea2;
 	
 	crear_tarea(prueba1,0);
-	crear_tarea(prueba2,1);
+	//crear_tarea(prueba2,1);
 	
 	sti();
 	for (;;) __asm__ __volatile__ ( "hlt" );

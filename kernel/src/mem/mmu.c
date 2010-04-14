@@ -150,8 +150,8 @@ void init_paging(uint32_t kernel_pages_count)
     uint32_t i;
     for(i=0; i<kernel_pages_count; i++)
     {
-        kernel_pdt[i]       = ((i*KERNEL_PAGESIZE) << 12) | 0x83; 
-        kernel_pdt[i+512]   = ((i*KERNEL_PAGESIZE) << 12) | 0x83;
+        kernel_pdt[i]       = (i << 22) | 0x83; 
+        kernel_pdt[i+512]   = (i << 22) | 0x83;
     }
 
     //armamos la tabla para mapear las futuras tablas de paginacion y asi tenerlas en direcciones separadas
@@ -289,6 +289,7 @@ int8_t page_alloc(pde_t *pdt, page_frame_t *page_frame, uint32_t va, uint8_t per
         //Incrementamos la cantidad de referencias
         page_frame->ref_count++;
         *pte = get_page_frame_PA(page_frame) | perm | PAGE_PRESENT;
+		  if (pdt == getCR3()) invlpg(va);
 
         return E_MMU_SUCCESS;
     }
@@ -319,6 +320,7 @@ pte_t* page_install_page_table(pde_t *pdt, page_frame_t *frame)
     master_page_table[i] = ptable_pa | PAGE_SUPERVISOR | PAGE_RW | PAGE_PRESENT;
     ptable_va = KERNEL_PAGING_TABLES_VA + (i++ << 12);
     //Ahora que esta mapeada, puedo usar un puntero para limpiarla
+	 invlpg(ptable_va);
     memset((pde_t*)ptable_va, 0, PAGESIZE);
     //devolvemos el puntero
     return (pde_t*)ptable_va;
@@ -490,6 +492,8 @@ void install_gdt()
 	gdtr_t *gdtr = (gdtr_t *) g_GDT;
 	gdtr->limit = (uint16_t) (sizeof( g_GDT ) - 1);
 	gdtr->base = (uint32_t)KVA2PA(g_GDT); // Dirección física.
+	
+	kprint("GDT BASE: 0x%x (0x%x)\n", (uint32_t) g_GDT, (uint32_t) KVA2PA((uint32_t) g_GDT) );
 
 	gdt_fill_code_segment( g_GDT + 1, (void *) 0, 0xFFFFFFFF, 0 ); // Código kernel
 	gdt_fill_data_segment( g_GDT + 2, (void *) 0, 0xFFFFFFFF, 0 ); // Datos kernel

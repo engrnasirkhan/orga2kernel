@@ -6,6 +6,7 @@
 #include <boot/programs.h>
 #include <mem/mmu.h>
 #include <mem/vmm.h>
+#include <mem/memlayout.h>
 #include <scheduler/tss.h>
 #include <screen/screen.h>
 #include <kernel/panic.h>
@@ -19,6 +20,7 @@ void pruebaFuncion(){
 
 //Funcion que muestra menu
 void menu(){
+	return; 
 	//__asm__ __volatile__ ("xchg %bx,%bx");
 kclrscreen();
 kprint("Menu miOS: Como operar \n \n \n \n");
@@ -54,7 +56,8 @@ void scheduler(){
 	__asm__ __volatile__ (
 		"pushl %0\n\t"
 		"pushl $0\n\t"
-		"ljmp *(%%esp)"
+		"ljmp *(%%esp)\n\t"
+		"addl $8, %%esp"
 		: : "rm"(selector_prox)
 	);
 }
@@ -149,20 +152,45 @@ void crear_tarea(programs_t programa, char numero_tarea){
 	tareas[numero_tarea].pa_tss = (void *) fisica_tss;
 	struct tss *nueva_tss = (struct tss *) virtual_tss;
 
+	// Mapeamos la TSS de la tarea y la del kernel en el espacio de direcciones
+	// de la tarea.
+	uint32_t tss_kernel = gdt_get_base( g_GDT + 5 );
+	uint32_t permisos = PAGE_PRESENT | PAGE_RW | PAGE_SUPERVISOR;
+	kprint( "Mapeando(0x%x) 0x%x --> 0x%x\n", virtual_dtp, virtual_tss, fisica_tss );
+	page_map_pa2va( (pde_t *) virtual_dtp, fisica_tss, virtual_tss, permisos, 1 );
+	kprint( "Mapeando(0x%x) 0x%x --> 0x%x\n", virtual_dtp, KVA2PA(tss_kernel), tss_kernel );
+	page_map_pa2va( (pde_t *) virtual_dtp, KVA2PA(tss_kernel), tss_kernel, permisos, 1 );
+
+#if 0
 	// Mapeamos las TSS de todas las tareas en la tarea actual
-	// TODO: Hacer que nuestra TSS aparezca en el espacio de
-	// direcciones de todas las otras tareas.
-	/*for ( i = 0; i < sizeof(tareas)/sizeof(tarea); i++ ) {
-		if ( i == numero_tarea ) continue;
-		if ( tareas[i].hay_tarea == -1 ) continue;
-		if ( page_map_pa2va( (pde_t *) virtual_dtp,
+	for ( i = 0; i < sizeof(tareas)/sizeof(tarea); i++ ) {
+		pde_t *pde = PA2KVA(getCR3());
+		if ( i == tarea_activa ) continue;
+		if ( tareas[i].hay_tarea == 0 ) continue;
+		kprint( "TSS: %x(%x)\nPDE:%x(%x)\n",
+			tareas[i].va_tss, tareas[i].pa_tss, pde, getCR3() );
+		if ( page_map_pa2va( (pde_t *) PA2KVA(getCR3()),
 			(uint32_t) tareas[i].pa_tss,
 			(uint32_t) tareas[i].va_tss,
 			PAGE_PRESENT | PAGE_RW | PAGE_SUPERVISOR,
 			1 ) != E_MMU_SUCCESS )
 			panic ( "No pude mapear la TSS de los demás procesos :-(" );
-	}*/
-	
+	}
+
+	// Mapeamos nuestra TSS en todas las otras tareas
+	for ( i = 0; i < sizeof(tareas)/sizeof(tarea); i++ ) {
+		if ( tareas[i].hay_tarea == 0 ) continue;
+		tss_t *tss;
+		pde_t *pde;
+		tss = (tss_t *) PA2KVA( tareas[i].pa_tss );
+		pde = (pde_t *) PA2KVA( tss->cr3 );
+		kprint( "TSS: %x(%x)\nPDE: %x(%x)\n", tss, tareas[i].pa_tss, pde, tss->cr3 );
+		if ( page_map_pa2va( pde, (uint32_t) fisica_tss, (uint32_t) virtual_tss,
+			PAGE_PRESENT | PAGE_RW | PAGE_SUPERVISOR,
+			1 ) != E_MMU_SUCCESS )
+			panic ( "No pude mapear mi TSS en los demás procesos :-(" );
+	}
+#endif
 //Pido pagina para codigo en el contexto de la nueva tarea y la mapeo a la pdt nueva
 	///TODO: Hasta ahora solo agarra una pagina para el codigo, habria que agarrar las que hagan falta.
 	uint32_t virtual_codigo;

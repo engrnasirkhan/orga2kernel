@@ -8,8 +8,8 @@
 #define NULL  0
 
 //Macros para obtener los offsets correspondiendentes de una virtual address
-#define GET_PD_OFFSET(x)  ((x & 0xFFC00000) >> 22)
-#define GET_PT_OFFSET(x)  ((x & 0x003FF000) >> 12)
+#define GET_PD_OFFSET(x)  (((x) & 0xFFC00000) >> 22)
+#define GET_PT_OFFSET(x)  (((x) & 0x003FF000) >> 12)
 
 //Permisos comunes entre los PDE Y PTE
 #define PAGE_PRESENT    0x01
@@ -22,14 +22,14 @@
 #define PAGE_4MB        0x80
 
 //Macros para analizar los permisos y direccioens de las PDE y PTE
-#define IS_PRESENT(x)       (x & PAGE_PRESENT)
-#define IS_READWRITE(x)     (x & PAGE_RW)
-#define IS_USER_PAGE(x)     (x & PAGE_USER)
-#define IS_WRITETHROUGH(x)  (x & PAGE_WTHROUGH)
-#define IS_CACHEDISABLED(x) (x & PAGE_CACHEDIS)
-#define IS_4MB(x)           (x & PAGE_4MB)
+#define IS_PRESENT(x)       ((x) & PAGE_PRESENT)
+#define IS_READWRITE(x)     ((x) & PAGE_RW)
+#define IS_USER_PAGE(x)     ((x) & PAGE_USER)
+#define IS_WRITETHROUGH(x)  ((x) & PAGE_WTHROUGH)
+#define IS_CACHEDISABLED(x) ((x) & PAGE_CACHEDIS)
+#define IS_4MB(x)           ((x) & PAGE_4MB)
 
-#define GET_BASE_ADDRESS(x) (x & 0xFFFFF000)
+#define GET_BASE_ADDRESS(x) ((x) & 0xFFFFF000)
 
 //Codigo de errores generales de las funcioens de la MMU
 #define E_MMU_SUCCESS               0X01
