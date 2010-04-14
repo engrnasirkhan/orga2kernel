@@ -289,7 +289,7 @@ int8_t page_alloc(pde_t *pdt, page_frame_t *page_frame, uint32_t va, uint8_t per
         //Incrementamos la cantidad de referencias
         page_frame->ref_count++;
         *pte = get_page_frame_PA(page_frame) | perm | PAGE_PRESENT;
-		  if (pdt == getCR3()) invlpg(va);
+		  if ((uint32_t)pdt == getCR3()) invlpg(va);
 
         return E_MMU_SUCCESS;
     }
