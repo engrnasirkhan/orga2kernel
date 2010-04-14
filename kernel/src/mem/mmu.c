@@ -491,16 +491,14 @@ void install_gdt()
 	// Inicializamos la GDT.
 	gdtr_t *gdtr = (gdtr_t *) g_GDT;
 	gdtr->limit = (uint16_t) (sizeof( g_GDT ) - 1);
-	gdtr->base = (uint32_t)KVA2PA(g_GDT); // Dirección física.
+	gdtr->base = (uint32_t)g_GDT; // Dirección física.
 	
-	kprint("GDT BASE: 0x%x (0x%x)\n", (uint32_t) g_GDT, (uint32_t) KVA2PA((uint32_t) g_GDT) );
-
 	gdt_fill_code_segment( g_GDT + 1, (void *) 0, 0xFFFFFFFF, 0 ); // Código kernel
 	gdt_fill_data_segment( g_GDT + 2, (void *) 0, 0xFFFFFFFF, 0 ); // Datos kernel
 	gdt_fill_code_segment( g_GDT + 3, (void *) 0, 0xFFFFFFFF, 3 ); // Código usuario
 	gdt_fill_data_segment( g_GDT + 4, (void *) 0, 0xFFFFFFFF, 3 ); // Datos usuario
 	// Por lo que entiendo, LGDT puede leer una dirección virtual.
-	lgdt( (void *) ((unsigned long) KVA2PA(g_GDT)) ); // Dirección física
+	lgdt( g_GDT ); // Dirección física
 }
 
 uint8_t install_task_pdt(uint32_t *va, uint32_t *pa)
