@@ -12,18 +12,9 @@
 #include <lib/string.h>
 #include <scheduler/scheduler.h>
 
-
-
-
 //funcion que inicializa gran parte de las estructuras del kernel
 extern void kinit ( multiboot_info_t* mbd ) __init;
 static reg_t mapa_programa[1024] __attribute__ ((aligned (4096)));
-
-
-
-
-
-
 
 static void ejecutar ( unsigned long phys_start, unsigned long phys_end, char *cmdline ) {
 	programs_t *p = (programs_t *) phys_start;
@@ -197,7 +188,7 @@ void kmain(multiboot_info_t* mbd, unsigned int magic ){
 
 	//Iniciamos Scheduler
 	iniciar_scheduler();
-
+    
 	programs_t prueba1;
 	prueba1.va_entry = &(pruebatarea);
 	prueba1.va_text = &(pruebatarea);
@@ -207,9 +198,11 @@ void kmain(multiboot_info_t* mbd, unsigned int magic ){
 	prueba2.va_text = &pruebatarea2;
 	
 	crear_tarea(prueba1,0);
+	
 	//crear_tarea(prueba2,1);
 	
 	sti();
+	
 	for (;;) __asm__ __volatile__ ( "hlt" );
 }
 

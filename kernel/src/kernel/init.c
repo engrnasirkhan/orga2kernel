@@ -47,7 +47,7 @@ void kinit ( multiboot_info_t* mbd ) {
 	// pila propia fuera del contexto de una tarea. ¿O si?
 
 	// Inicializamos la mmu
-    init_mem(mbd);
+    mmu_init(mbd);
 
 	// Inicializamos la IDT.
 	g_IDTr.limit = sizeof(g_IDT) - 1;

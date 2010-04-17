@@ -99,7 +99,7 @@ void iniciar_scheduler(){
 	// Creamos el TSS inicial para el kernel
 	uint32_t virtual, fisica;
 	reg_t seg;
-	if ( mmu_alloc( (pde_t *) PA2KVA(getCR3()), &virtual, PAGE_PRESENT | PAGE_RW | PAGE_SUPERVISOR, &fisica ) == E_MMU_NO_MEMORY )
+	if ( mmu_alloc( (pde_t *) PA2KVA(getCR3()), &virtual, &fisica, PAGE_PRESENT | PAGE_RW | PAGE_SUPERVISOR ) == E_MMU_NO_MEMORY )
 		panic( "No se pudo crear el TSS inicial." );
 	gdt_fill_tss_segment( g_GDT + 5, (void *) virtual, 0x67, 0 ); 
 	seg = 5<<3;
@@ -140,14 +140,14 @@ void crear_tarea(programs_t programa, char numero_tarea){
 	
 	uint32_t fisica_dtp;
     uint32_t virtual_dtp;
-    if ((install_task_pdt(&virtual_dtp,&fisica_dtp)) == E_MMU_NO_MEMORY) kprint("Error al crear Tabla de Paginas ");
+    if ((mmu_install_task_pdt(&virtual_dtp,&fisica_dtp)) == E_MMU_NO_MEMORY) kprint("Error al crear Tabla de Paginas ");
 
 
 //Pido pagina para nueva tss (esto lo hago desde la pdt del kernel)
 	uint32_t fisica_tss;
     uint32_t virtual_tss;
     uint8_t perm = 2; 
-	if ((mmu_alloc( (pde_t *) PA2KVA(getCR3()) , &virtual_tss, perm , &fisica_tss)) == E_MMU_NO_MEMORY) kprint("Error al crear TSS nueva tarea");
+	if ((mmu_alloc( (pde_t *) PA2KVA(getCR3()) , &virtual_tss, &fisica_tss, perm)) == E_MMU_NO_MEMORY) kprint("Error al crear TSS nueva tarea");
 	tareas[numero_tarea].va_tss = (void *) virtual_tss;
 	tareas[numero_tarea].pa_tss = (void *) fisica_tss;
 	struct tss *nueva_tss = (struct tss *) virtual_tss;
@@ -157,9 +157,9 @@ void crear_tarea(programs_t programa, char numero_tarea){
 	uint32_t tss_kernel = gdt_get_base( g_GDT + 5 );
 	uint32_t permisos = PAGE_PRESENT | PAGE_RW | PAGE_SUPERVISOR;
 	kprint( "Mapeando(0x%x) 0x%x --> 0x%x\n", virtual_dtp, virtual_tss, fisica_tss );
-	page_map_pa2va( (pde_t *) virtual_dtp, fisica_tss, virtual_tss, permisos, 1 );
+	mmu_map_pa2va( (pde_t *) virtual_dtp, fisica_tss, virtual_tss, permisos, 1 );
 	kprint( "Mapeando(0x%x) 0x%x --> 0x%x\n", virtual_dtp, KVA2PA(tss_kernel), tss_kernel );
-	page_map_pa2va( (pde_t *) virtual_dtp, KVA2PA(tss_kernel), tss_kernel, permisos, 1 );
+	mmu_map_pa2va( (pde_t *) virtual_dtp, KVA2PA(tss_kernel), tss_kernel, permisos, 1 );
 
 #if 0
 	// Mapeamos las TSS de todas las tareas en la tarea actual
@@ -195,7 +195,7 @@ void crear_tarea(programs_t programa, char numero_tarea){
 	///TODO: Hasta ahora solo agarra una pagina para el codigo, habria que agarrar las que hagan falta.
 	uint32_t virtual_codigo;
 	uint32_t fisica_codigo;
-    if ((mmu_alloc((uint32_t *)virtual_dtp, &virtual_codigo, perm, &fisica_codigo)) == E_MMU_NO_MEMORY) kprint("Error pedir pag codigo nueva tarea");
+    if ((mmu_alloc((uint32_t *)virtual_dtp, &virtual_codigo, &fisica_codigo, perm)) == E_MMU_NO_MEMORY) kprint("Error pedir pag codigo nueva tarea");
 
 
 
@@ -214,7 +214,7 @@ void crear_tarea(programs_t programa, char numero_tarea){
 //Pido pagina para pila en el contexto de la nueva tarea y la mapeo a la pdt de la tarea 
 	uint32_t virtual_pila;
 	uint32_t fisica_pila;
-	if ((mmu_alloc((uint32_t *)virtual_dtp, &virtual_pila, perm, &fisica_pila))== E_MMU_NO_MEMORY) kprint("Error pedir pag pila nueva tarea");
+	if ((mmu_alloc((uint32_t *)virtual_dtp, &virtual_pila, &fisica_pila, perm))== E_MMU_NO_MEMORY) kprint("Error pedir pag pila nueva tarea");
 
 
 //Agrego una entrada nueva de GDT
@@ -245,11 +245,11 @@ void crear_tarea(programs_t programa, char numero_tarea){
 	//Pido pagina para buffer mapeado en kernel, la pido con mmu_alloc para tener tambien la fisica
 	uint32_t virtual_video_kernel;
 	uint32_t fisica_video_kernel;
-	if ((mmu_alloc( (pde_t *) PA2KVA(getCR3()), &virtual_video_kernel, perm, &fisica_video_kernel))== E_MMU_NO_MEMORY) kprint("Error pedir pag buffer video nueva tarea");
+	if ((mmu_alloc( (pde_t *) PA2KVA(getCR3()), &virtual_video_kernel, &fisica_video_kernel, perm))== E_MMU_NO_MEMORY) kprint("Error pedir pag buffer video nueva tarea");
 	
 	
 	//mapeo 0xb8000, con la direccion fisica de nuevo_buffer_video en nueva pdt
-	if( (page_map_pa2va( (pde_t *) virtual_dtp, fisica_video_kernel,0xb8000,PAGE_USER,1))!=E_MMU_SUCCESS) kprint("Error page_map_pa2va");
+	if( (mmu_map_pa2va( (pde_t *) virtual_dtp, fisica_video_kernel,0xb8000,PAGE_USER,1))!=E_MMU_SUCCESS) kprint("Error page_map_pa2va");
 	
 //Modifico las variables correspondientes al scheduler y tarea
 	

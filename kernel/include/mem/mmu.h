@@ -49,91 +49,99 @@ typedef uint32_t pde_t;
 //page table entry
 typedef uint32_t pte_t;
 
-//Inicializa las estructuras relacionadas con la administracion
-//de memoria, instala una gdt definitiva, y activa paginacion
-void init_mem(multiboot_info_t* mbd);
+/**
+ * Inicializa la Memory Management Unit. Para ello utilizando la informacion provista 
+ * por GRUB inicializa las estructuras de control de memoria y se encarga de llamar 
+ * a las funciones necesarias para instalar la GDT definitiva y pasar a paginacion
+ *
+ * @param mdb Puntero a estructura multiboot_info_t provista por GRUB al inicio del kernel
+ * @see mmu_install_gdt
+ * @see mmu_init_paging
+ * @see mmu_build_kernel_heap
+ */
+void mmu_init(multiboot_info_t* mbd);
 
-//Inicializa las PDT en 0 salvo las entradas que corresponden
-//al kernel. El kernel se guarda en paginas de KERNEL_PAGESIZE (que son de 4mb)
-//kernel_pages_count: es la cantidad de paginas de 4mb que ocupa el kernel
-void init_paging(uint32_t kernel_pages_count);
+/**
+ * Toma un frame fisico libre de 4kb y lo mapea dentro de la primera direccion virtual disponible para la 
+ * PDT pasada como parametro con los permisos solicitados. Devuelve ademas la direccion fisica asociada.
+ *
+ * @param pdt Puntero a la pdt sobre la cual se quiere realizar el mapeo
+ * @param va  Puntero donde se guarda la direccion virtual donde se realizo el mapeo
+ * @param pa  Puntero donde se guarda la direccion fisica
+ * @param perm Permisos asignados a la pagina mapeada
+ * @return Devuelve E_MMU_SUCCESS si se pudo realizar el alloc correctamente, o E_MMU_NO_MEMORY en caso de error
+ * @see mmu_free
+ * @see mmu_alloc_at_VA
+ * @see mmu_map_pa2va
+ */
+uint8_t mmu_alloc(uint32_t *pdt, uint32_t *va, uint32_t *pa, uint8_t perm);
+           
+/**
+ * Obtiene un frame libre y lo intenta mapear en la direccion virtual pasada como parametro.
+ *
+ * @param pdt Puntero a la PDT sobre la cual se realiza el mapeo
+ * @param va Direccion virtual usada para mapear el frame libre
+ * @param perm Permisos asignados a la nueva pagina mapeada
+ * @param force_dealloc Si en la va pasada como parametro ya habia un mapeo previo, entonces lo deshace si force_dealloc==1
+ * @return Devuelve E_MMU_SUCCESS si se realizo el mapeo correctamente, E_MMU_INVALID_VA si ya habia un mapeo y force_dealloc==0 o E_MMU_NO_MEMORY si no se pudo realizar
+ * @see mmu_alloc
+ * @see mmu_map_pa2va
+ * @see mmu_free
+ */
+uint8_t mmu_alloc_at_VA( pde_t *pdt, uint32_t va, uint8_t perm, uint8_t force_dealloc );
 
-//Inicializa una parte de la memoria como heap para que sea usada por kmalloc
-void init_kernel_heap();
+/**
+ * Intenta asociar la va con la pa pasada como parametro para la pdt solicitada.
+ *
+ * @param pdt Puntero a la PDT sobre la cual se realiza el mapeo
+ * @param va Direccion fisica usada para realizar el mapeo
+ * @param va Direccion virtual usada para mapear la direccion fisica
+ * @param perm Permisos asignados a la nueva pagina mapeada
+ * @param force_dealloc Si en la va pasada como parametro ya habia un mapeo previo, entonces lo deshace si force_dealloc==1
+ * @return Devuelve E_MMU_SUCCESS si se realizo el mapeo correctamente, E_MMU_INVALID_VA si ya habia un mapeo y force_dealloc==0 o E_MMU_NO_MEMORY si no se pudo realizar
+ * @see mmu_alloc
+ * @see mmu_alloc_at_VA
+ * @see mmu_free
+ */
+uint8_t mmu_map_pa2va(pde_t *pdt, uint32_t pa, uint32_t va, uint8_t perm, uint8_t force_dealloc );
 
-//Libera el page_frame, devolviendolo al stack de frames libres
-void push_free_frame(page_frame_t* page_frame);
+/**
+ * Dada una PDT, deshace el mapeo de la va, obtiene el frame correspondiente, decrementa su cantidad de 
+ * referencias (si son 0 lo apila como libre) y realiza invlpg para limpiar la TLB
+ *
+ * @param pdt Puntero a una PDT
+ * @param va  Direccion virtual a liberar. Debe ser multiplo de PAGE_SIZE
+ * @return uint8_t Devuelve E_MMU_SUCCESS si la operacion se realizo con exito, o E_MMU_INVALID_VA si la va no pudo ser desmapeada
+ * @see mmu_alloc
+ * @see mmu_alloc_at_VA
+ * @see invlpg
+ */
+uint8_t mmu_free( pde_t *pdt, uint32_t va );
 
-//Devuelve un page_frame libre del stack, quitandolo de este
-page_frame_t* pop_free_frame();
+/**
+ * Devuelve la cantidad de frames libres en memoria fisica
+ *
+ * @return uint32_t
+ */
+uint32_t mmu_get_free_frame_count(); 
 
-//Devuelve la direccion fisica del page_frame_t frame
-uint32_t get_page_frame_PA(page_frame_t* frame);
+/**
+ * Instala una nueva PDT para ser usada por una nueva tarea
+ *
+ * @param va Es un puntero a un uint32_t que se va a utilizar para guardar la va utilizada para mapear la nueva pdt dentro del contexto del kernel
+ * @param pa Es un puntero a un uint32_t que se va a utililar para guardar la pa utilizada para guardar la nueva pdt
+ * @return uint8_t Devuelve E_MMU_SUCCESS si se realizo con exito la instalacion, o E_MMU_NO_MEMORY si no hubo memoria disponible para realizar la operacion  
+ * @see mmu_uninstall_task_pdt
+ */
+uint8_t mmu_install_task_pdt(uint32_t *va, uint32_t *pa);
 
-//A partir de una direccion fisica, devuelve un puntero al page_frame_t correspondiente en el array mem_page_frames
-//No quita al frame de la lista de libres si es que forma parte de dicha lista.
-//Devuelve NULL si la direccion fisica va mas alla de la memoria fisica disponible
-//NOTA: physical_address debe ser multiplo de PAGESIZE
-page_frame_t* get_PA_page_frame(uint32_t physical_address);
+/**
+ * Desinstala la PDT de una tarea pasada como parametro, realizando todos los desmapeos correspondientes
+ * 
+ * @param task_pdt Puntero a la PDT de la taerea
+ * @return uint8_t
+ * @see mmu_install_task_pdt 
+ */
+uint8_t mmu_uninstall_task_pdt(pde_t *task_pdt);
 
-//Devuelve el frame correspondiente a la physical address pasada como parametro, quitandolo de la lista de libres si es que estaba libre
-//En caso de que la pa no sea válida, devuelve NULL
-page_frame_t* get_page_frame( uint32_t physical_address );
-
-//Asocia la direccion "va" con el frame "page_frame" en la tabla apuntada por pdt con los permisos "perm"
-//Si la va ya estaba mapeada a otro lado, force_dealloc indica si se debe desalojar (==1) y remapear, o devolver error (==0)
-//Valores de retorno:   ->E_MMU_SUCCESS: si se pudo asociar correctamente va con el page_frame
-//                      ->E_MMU_INVALID_VA: si la va ya estaba mapeada a otro lado y force_dealloc==0
-//                      ->E_MMU_NO_MEMEMORY: si no se pudo completar la operacion
-int8_t page_alloc(pde_t *pdt, page_frame_t *page_frame, uint32_t va, uint8_t perm, uint8_t force_dealloc);
-
-//Recorre las tablas y hace apuntar pte a la page table entry que corresponde a va dentro de pdt
-//En caso de que todo salga bien, devuelve 1 y en pte el puntero a la pte correspondiente
-//Si la page table no existe, create_page_table determina si se crea una nueva, o se devuelve error
-//Posibles valores de retorno: -> E_MMU_SUCCESS: si todo salio bien
-//                             -> E_MMU_PTABLE_NOT_PRESENT: si la tabla de paginas no existe y create_page_table==0
-//                             -> E_MMU_NO_MEMORY: si la creacion de la tabla de paginas fallo
-int8_t page_dirwalk(pde_t *pdt, uint32_t va, pte_t **pte, uint8_t create_page_table);
-
-//Decrementa las referencias del page_frame, y si estas llegan a ser nulas, lo agrega al stack de frames libres
-void page_dealloc(page_frame_t *frame);
-
-//Obtiene un page frame y lo mapea en va.
-//Valores de retorno:   ->E_MMU_SUCCESS: si todo salio bien
-//                      ->E_MMU_NO_MEMORY: si no había más memoria fisica para realizar la operacion                      
-uint8_t page_alloc_at_VA( pde_t* pdt, uint32_t va, uint8_t perm, uint8_t force_dealloc );
-
-//A partir de la dirección virtual, obtiene el frame, le decrementa la cuenta de referencia y lo
-//desmapea + invlpg().
-//Valores de retorno:       ->E_MMU_SUCCESS: si todo sale bien
-//                          ->E_MMU_INVALID_VA: si en realidad no habia nada en esa va, osea page_dirwalk devuelve que la ptable no esta
-uint8_t page_free( pde_t *pdt, uint32_t va );
-
-//Intenta asocia, para la pdt pasada como parámetro, la physical address con la virtual address. "force_dealloc" funciona igual que para page_alloc
-//Valores de retorno:       ->E_MMU_SUCCESS: si todo sale bien
-//                          ->E_MMU_INVALID_VA: si la virtual address ya esta mapeada a otra direccion fisica (liberarla primero en todo caso con page_free)
-//                          ->E_MMU_NO_MEMORY: si no hay mas lugar en memoria fisica para realizar el mapeo
-uint8_t page_map_pa2va(pde_t *pdt, uint32_t pa, uint32_t va, uint8_t perm, uint8_t force_dealloc );
-
-//Instala una nueva tabla de paginas en el PDT correspondiente a la direccion virtual va usando el page_frame_t frame
-//Devuelve el puntero a la nueva tabla de paginas. La tabla queda inicializada con 0's
-pte_t* page_install_page_table(pde_t *pdt, page_frame_t *frame);
-
-//Devuelve cuantos frames quedan libres en memoria fisica
-uint32_t get_free_page_frame_count(); 
-
-//Devuelve la direccion virtual de la tabla de paginas
-pte_t *get_page_table_va(uint32_t page_table_pa);
-
-//Instala una nueva pdt para una tarea
-//Valores de retorno:   ->E_MMU_SUCCESS: si sale todo bien
-//                      ->E_MMU_NO_MEMORY:  si no hay memoria para realizar la operacion
-uint8_t install_task_pdt(uint32_t *va, uint32_t *pa);
-
-//Toma un frame fisico libre y lo mapea en la primera direccion virtual libre disponible.
-//En va devuelve la dirección virtual y en pa la dirección física.
-//Valores de retorno:   ->E_MMU_SUCCESS
-//                      ->E_MMU_NO_MEMORY
-uint8_t mmu_alloc(uint32_t *pdt, uint32_t *va, uint8_t perm, uint32_t *pa);
-
-#endif
+#endif //__MMU__H__

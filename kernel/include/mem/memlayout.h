@@ -15,8 +15,7 @@
 //inversa de KVA2PA
 #define PA2KVA(x)   (((uint32_t) (x)) + 0x80000000)
 
-#define PAGESIZE    0x1000
-
-#define KERNEL_PAGESIZE   (0x400000)
+#define PAGE_SIZE          (0x1000)
+#define LARGE_PAGE_SIZE   (0x400000)
 
 #endif

@@ -1,9 +1,9 @@
-#ifndef __KMALLOC__H__
-#define __KMALLOC__H__
+#ifndef __VMM__H__
+#define __VMM__H__
 
 #include <asm/types.h>
 
-//cantidad minima de espacio para llamar a morecore, si se pide menos, se pide NALLOC en su lugar
+//Cantidad minima de espacio para llamar a morecore, si se pide menos, se pide NALLOC en su lugar
 #define NALLOC  1024
 
 typedef long align_t;
@@ -23,17 +23,22 @@ union header{
 
 typedef union header header_t;
 
-//Devuelve un puntero a block_size bytes listos para usar
-//No controla que se use bien, por lo que cualquier mal uso rompe toda la estructura que controla el heap
+/**
+ * Devuelve un puntero a block_size bytes listos para usar dentro del heap del kernel
+ * No realiza verificacion de limites, por lo que escribir mas alla del tamaño pedido puede ocasionar sobreescribir estructuras de control
+ *
+ * @param block_size Tamaño del nuevo bloque pedido
+ * @return ptr_t Puntero al bloque de memoria solicitado
+ * @see kfree
+ */
 ptr_t kmalloc(uint32_t block_size);
 
-//Libera el bloque apuntado por ptr
+/**
+ * Libera un bloque de memoria solicitado con kmalloc.
+ *
+ * @param prt Puntero al bloque de memoria conseguido con kmalloc
+ * @see kmalloc
+ */
 void kfree(ptr_t ptr);
 
-//Intenta conseguir mas espacio para el heap del kernel
-//Si no consigue, devuelve NULL
-header_t* morecore(uint32_t size);
-
-//Agranda el heap el tamaño que sea necesario
-uint8_t* sbrk(uint32_t size);
-#endif
+#endif //__VMM__H__
