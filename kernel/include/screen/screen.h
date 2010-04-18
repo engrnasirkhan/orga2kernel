@@ -26,4 +26,8 @@ void set_screen_mode(enum screen_mode mode);
 
 void set_screen_pointer(uint8_t* screen_ptr);
 
+//functions for tty area
+size_t kprint_tty(uint8_t * );
+void kprint_tty_clear();
+void kprint_tty_backspace();
 #endif

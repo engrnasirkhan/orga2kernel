@@ -10,6 +10,7 @@
 #include <scheduler/tss.h>
 #include <screen/screen.h>
 #include <kernel/panic.h>
+#include <drivers/keyboard.h>
 
 #define limite_nueva_tss 0x67
 
@@ -22,7 +23,7 @@ void pruebaFuncion(){
 
 
 //Funcion que muestra menu
-void menu(){
+void menu(key s){
 	return; 
 	//__asm__ __volatile__ ("xchg %bx,%bx");
 kclrscreen();
@@ -88,7 +89,7 @@ void matar_tarea(char numero_tarea){
 
 
 //Funcion para mostrar un slot en particular
-void mostrar_slot(char s){
+void mostrar_slot(key s){
 	//Funcion que pasa del buffer de pantalla de la tarea que se quiere mostrar, a la pantalla
 	char * b_pantalla;
 	b_pantalla = (char *) 0xb8000L;
@@ -126,7 +127,7 @@ void iniciar_scheduler(){
 	contador_actualizar_pantalla = 0;
 	
 	//Lanzamos programa menu
-	menu();
+	menu(1);
 }
 
 

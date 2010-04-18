@@ -6,6 +6,7 @@
 #include <asm/gdt.h>
 #include <scheduler/tss.h>
 #include <boot/programs.h>
+#include <drivers/keyboard.h>
 
 #define offset_gdt_tareas 10
 #define tam_buffer_pantalla 8000
@@ -32,7 +33,7 @@ char contador_actualizar_pantalla;	//Contador que sirve para actualizar buffer d
 
 
 //Funcion que muestra menu
-void menu();
+void menu(key s);
 
 //Funcion de scheduler
 void scheduler();
@@ -44,7 +45,7 @@ void matar_tarea(char numero_tarea);
 
 
 //Funcion para mostrar un slot en particular
-void mostrar_slot(char s);
+void mostrar_slot(key s);
 
 //Funcion para iniciar todo lo relativo al scheduler
 void iniciar_scheduler();

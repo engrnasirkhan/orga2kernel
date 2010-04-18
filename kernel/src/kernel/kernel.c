@@ -1,7 +1,8 @@
 #include <asm/asm.h>
 #include <asm/types.h>
+#include <asm/handlers.h>
 #include <boot/multiboot.h>
-#include <boot/programs.h>
+#include <kernel/panic.h>
 #include <screen/screen.h>
 #include <asm/gdt.h>
 #include <asm/idt.h>
@@ -10,6 +11,8 @@
 #include <mem/memlayout.h>
 #include <mem/vmm.h>
 #include <lib/string.h>
+#include <drivers/keyboard.h>
+#include <tty/tty.h>
 #include <scheduler/scheduler.h>
 
 //funcion que inicializa gran parte de las estructuras del kernel
@@ -110,30 +113,6 @@ int timer( struct registers *r ) {
 	return 0;
 }
 
-int teclado( struct registers *r ) {
-	cli();
-	/*
-	uint8_t key = inb( 0x60 );
-//  __asm__ __volatile__ ("xchg %bx,%bx");
-if (key==1 || (key >58 && key<69)){				//si entro aca fue para cambiar de slot o al menu
-	if (key ==1) {menu(); tarea_en_pantalla = -1;}// Si apreto Esc
-	if (key==59) {kprint("Pantalla 1"); tarea_en_pantalla = 0; mostrar_slot(0); }
-	if (key==60) {tarea_en_pantalla = 1;mostrar_slot(1);}
-	if (key==61) {tarea_en_pantalla = 2; mostrar_slot(2);}
-	if (key==62) {tarea_en_pantalla = 3; mostrar_slot(3);}
-	if (key==63) {tarea_en_pantalla = 4;mostrar_slot(4);}
-	if (key==64) {tarea_en_pantalla = 5;mostrar_slot(5);}
-	if (key==65) {tarea_en_pantalla = 6;mostrar_slot(6);}
-	if (key==66) {tarea_en_pantalla = 7;mostrar_slot(7);}
-	if (key==67) {tarea_en_pantalla = 8;mostrar_slot(8);}
-	if (key==68) {tarea_en_pantalla = 9; mostrar_slot(9);}
-}else {	}								// aca deberis ir algo para que capture lo que se escribe y lo mande en el slot donde esta o menu
-
-    */
-	sti();
-	return 0;
-}
-
 int pf( struct registers *r ) {
 	cli();
 	kprint( r->errcode & 1 ? "Page level protection\n" : "Page not present\n" );	
@@ -169,7 +148,6 @@ void kmain(multiboot_info_t* mbd, unsigned int magic ){
     
     //Ahora si, usando mbd que apunta bien a los datos del grub, inicializamos todo
     kinit( mbd );
-
     // Ejecutemos módulo por módulo.
     if ( mbd->flags & 8 ) {
         module_t *mod;
@@ -181,9 +159,25 @@ void kmain(multiboot_info_t* mbd, unsigned int magic ){
 	        ejecutar( mod->mod_start, mod->mod_end, (char *) mod->string );
         }
     }
-    
-	set_irq_handler( 0, &timer );
-	set_irq_handler( 1, &teclado );
+    kprint("llego\n");
+    key_init();
+    key_register(menu, 1);
+    key_register(mostrar_slot, 59);
+    key_register(mostrar_slot, 60);
+    key_register(mostrar_slot, 61);
+    key_register(mostrar_slot, 62);
+    key_register(mostrar_slot, 63);
+    key_register(mostrar_slot, 64);
+    key_register(mostrar_slot, 65);
+    key_register(mostrar_slot, 66);
+    key_register(mostrar_slot, 67);
+    key_register(mostrar_slot, 68);
+    kprint("binding keys done\n");
+    tty_t kernel_tty;
+    if(tty_init(&kernel_tty, NULL)){
+        panic("fallo  el inicio de las tty");
+    }
+	//Lanzamos programa para cargar tareas y modificar quantums.
 	set_isr_handler( 14, &pf ); // #PF
 
 	//Iniciamos Scheduler

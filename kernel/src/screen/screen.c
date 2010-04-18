@@ -5,17 +5,36 @@
 #define SCREEN_BIOS_ROWS    25
 #define SCREEN_BIOS_COLS    80
 
+#define SCREEN_STATUS_ROW SCREEN_BIOS_TTY_ROW + 1
+#define SCREEN_BIOS_TTY_ROW (SCREEN_BIOS_ROWS - 2)
+#define SCREEN_BIOS_TTY_INIT (SCREEN_BIOS_TTY_ROW * SCREEN_BIOS_COLS)
 //Current screen mode
 static enum screen_mode current_screen_mode;
 //Current screen pointer
 static uint8_t* current_screen_pointer;
 
+static uint32_t bios_current_row = 0;
+static uint32_t bios_current_col = 0;
+
+static uint32_t bios_tty_current_col = 0;
+static uint32_t bios_tty_caret_position = 0;
+static uint8_t  bios_tty_hided_caracter = ' ';
+
+//private
+void kscrllscreen();
+
 /*BIOS screen functions*/
 void write_char_bios(const uint8_t c);
 void clear_screen_bios();
+void bios_scrllscreen();
+void bios_tty_backspace();
+void bios_tty_show_caret();
+void bios_tty_hide_caret();
 
-static uint32_t bios_current_row = 0;
-static uint32_t bios_current_col = 0;
+/* bios tty functions */
+void bios_tty_clear();
+size_t bios_tty_print(uint8_t*);
+
 /***********************/
 
 int kprint(const uint8_t *format, ...)
@@ -88,7 +107,93 @@ int kprint(const uint8_t *format, ...)
     return char_count;
 }
 
+void kprint_tty_clear(){
+    
+    if(current_screen_mode == BIOS)
+    {
+        bios_tty_clear();
+    }
+    else
+    {
+        //future screen modes should be called from here
+    }
+}
+void bios_tty_clear() {
+    bios_tty_hide_caret();
+    bios_tty_current_col = 0;
+    for(int x = 0; x < SCREEN_BIOS_COLS; x++){
+        *(current_screen_pointer + (x + SCREEN_BIOS_TTY_INIT) * 2) = 0;
+        *(current_screen_pointer + (x + SCREEN_BIOS_TTY_INIT) * 2 + 1) = 0;
+    }
+    bios_tty_show_caret();
+}
 
+
+size_t kprint_tty(uint8_t*msg){
+    if(current_screen_mode == BIOS)
+    {
+        return bios_tty_print(msg);
+        bios_current_row = SCREEN_BIOS_ROWS-2;
+    }
+    else
+    {
+        //future screen modes should be called from here
+    }
+}
+
+size_t bios_tty_print(uint8_t * msg){
+    bios_tty_hide_caret();
+    int i = 0;
+    while(msg[i] != '\0' && bios_tty_current_col < SCREEN_BIOS_COLS) {
+        *(current_screen_pointer + (bios_tty_current_col + SCREEN_BIOS_TTY_INIT) * 2)      = msg[i] & 0xFF;
+        *(current_screen_pointer + (bios_tty_current_col + SCREEN_BIOS_TTY_INIT) * 2 + 1)  = 0x7;
+        bios_tty_current_col++;
+        i++;
+    }
+    //caret
+    bios_tty_show_caret();
+    return SCREEN_BIOS_COLS - bios_tty_current_col;
+}
+
+void bios_tty_show_caret(){
+    if(bios_tty_caret_position < SCREEN_BIOS_COLS){
+        bios_tty_hided_caracter = *(current_screen_pointer + (bios_tty_current_col + SCREEN_BIOS_TTY_INIT) * 2) &0xFF;
+        *(current_screen_pointer + (bios_tty_current_col + SCREEN_BIOS_TTY_INIT) * 2)      = 0x01;
+        *(current_screen_pointer + (bios_tty_current_col + SCREEN_BIOS_TTY_INIT) * 2 + 1)  = 0x7;
+    }
+    return;
+}
+
+void bios_tty_hide_caret(){
+    if(bios_tty_current_col+1 < SCREEN_BIOS_COLS){
+        *(current_screen_pointer + (bios_tty_current_col + SCREEN_BIOS_TTY_INIT) * 2)      = bios_tty_hided_caracter & 0xFF;
+        *(current_screen_pointer + (bios_tty_current_col + SCREEN_BIOS_TTY_INIT) * 2 + 1)  = 0x7;
+    }
+    return;
+}
+
+
+void kprint_tty_backspace() {
+    if(current_screen_mode == BIOS)
+    {
+        bios_tty_backspace();
+    }
+    else
+    {
+        //future screen modes should be called from here
+    }
+}
+
+void bios_tty_backspace(){
+    bios_tty_hide_caret();
+    if(bios_tty_current_col > 0){
+        bios_tty_current_col--;
+        *(current_screen_pointer + (bios_tty_current_col + SCREEN_BIOS_TTY_INIT) * 2)      = ' ';
+        *(current_screen_pointer + (bios_tty_current_col + SCREEN_BIOS_TTY_INIT) * 2 + 1)  = 0x7;
+    }
+    bios_tty_show_caret();
+    return;
+}
 
 void kputc(const uint8_t c)
 {
@@ -105,20 +210,11 @@ void kputc(const uint8_t c)
 
 void write_char_bios(const uint8_t c)
 {  
-    if(bios_current_row == SCREEN_BIOS_ROWS)
+    if(bios_current_row == SCREEN_BIOS_TTY_ROW)
     {
-        //move up the whole screen
-        int32_t i,j;
-        for(i=0; i<SCREEN_BIOS_ROWS-1; i++)
-        {
-            for(j=0; j<SCREEN_BIOS_COLS; j++)
-            {
-               *(current_screen_pointer + (j + i * SCREEN_BIOS_COLS) * 2) = *(current_screen_pointer + (j + (i+1) * SCREEN_BIOS_COLS) * 2);
-               *(current_screen_pointer + (j + i * SCREEN_BIOS_COLS) * 2 + 1) = *(current_screen_pointer + (j + (i+1) * SCREEN_BIOS_COLS) * 2 + 1); 
-            }
-        }
-        
-        bios_current_row = SCREEN_BIOS_ROWS-1;
+        //if in the last row.
+        bios_current_row--;
+        bios_scrllscreen();
     }
     if(c!='\n')
     {
@@ -138,8 +234,26 @@ void write_char_bios(const uint8_t c)
     {
         bios_current_row++;
     }
+}
+/* scroll up this screen */
+void bios_scrllscreen(){
+    //move up the whole screen
+    int32_t i,j;
+    for(i=0; i < SCREEN_BIOS_TTY_ROW - 1; i++)
+    {
+        for(j=0; j<SCREEN_BIOS_COLS; j++)
+        {
+           *(current_screen_pointer + (j + i * SCREEN_BIOS_COLS) * 2) = *(current_screen_pointer + (j + (i+1) * SCREEN_BIOS_COLS) * 2);
+           *(current_screen_pointer + (j + i * SCREEN_BIOS_COLS) * 2 + 1) = *(current_screen_pointer + (j + (i+1) * SCREEN_BIOS_COLS) * 2 + 1); 
+        }
+    }
     
-
+    //cleaning the last line , it's neater.
+    for(j=0; j < SCREEN_BIOS_COLS; j++)
+    {
+        *(current_screen_pointer + (j + bios_current_row * SCREEN_BIOS_COLS) * 2) = 0;
+        *(current_screen_pointer + (j + bios_current_row * SCREEN_BIOS_COLS) * 2 + 1) = 0;
+    }
 }
 
 void kclrscreen()
@@ -153,6 +267,8 @@ void kclrscreen()
         //nothing...
     }
 }
+
+
 
 
 void clear_screen_bios()
