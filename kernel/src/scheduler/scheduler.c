@@ -50,7 +50,7 @@ void scheduler(){
 	//Lanzo proxima tarea (de indice gdt_i en gdt) con RPL 11
 	//uint16_t selector_prox = (gdt_indice << 3) | 3;
 	uint16_t selector_prox = (gdt_indice << 3) | 0; // TODO: Usar el de arriba.
-	
+
 	kprint( "Saltando a tarea: %d, %d, %x\n", tarea_activa, gdt_indice, selector_prox );
 	kprint( "CR3: %x\n", ((tss_t *) tareas[tarea_activa].va_tss)->cr3 );
 	__asm__ __volatile__ (
@@ -95,12 +95,12 @@ void mostrar_slot(char s){
 
 //Funcion para iniciar todo lo relativo al scheduler
 void iniciar_scheduler(){
-
-	// Creamos el TSS inicial para el kernel
+	//Creamos el TSS inicial para el kernel
 	uint32_t virtual, fisica;
 	reg_t seg;
 	if ( mmu_alloc( (pde_t *) PA2KVA(getCR3()), &virtual, &fisica, PAGE_PRESENT | PAGE_RW | PAGE_SUPERVISOR ) == E_MMU_NO_MEMORY )
 		panic( "No se pudo crear el TSS inicial." );
+
 	gdt_fill_tss_segment( g_GDT + 5, (void *) virtual, 0x67, 0 ); 
 	seg = 5<<3;
 	__asm__ __volatile__ (

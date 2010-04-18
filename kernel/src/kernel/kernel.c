@@ -202,7 +202,7 @@ void kmain(multiboot_info_t* mbd, unsigned int magic ){
 	crear_tarea(prueba2,1);
 	
 	sti();
-	
+
 	for (;;) __asm__ __volatile__ ( "hlt" );
 }
 

@@ -633,6 +633,7 @@ uint8_t mmu_install_task_pdt(uint32_t *va, uint32_t *pa)
         while(i < small_frames_count)
         {
             pte[i]   = (large_frames_count * LARGE_PAGE_SIZE + i*PAGE_SIZE) | PAGE_PRESENT | PAGE_SUPERVISOR | PAGE_RW;
+            i++;
         }
 
         *va = task_pdt_va;
