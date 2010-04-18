@@ -491,7 +491,7 @@ uint8_t mmu_alloc_at_VA(pde_t *pdt, uint32_t va, uint8_t perm, uint8_t force_dea
     }
 }
 
-uint8_t page_free(pde_t *pdt, uint32_t va )
+uint8_t mmu_free(pde_t *pdt, uint32_t va )
 {
     //Primero obtenemos la pte para obtener la direccion fisica del frame
     pte_t *pte;
@@ -601,21 +601,38 @@ uint8_t mmu_install_task_pdt(uint32_t *va, uint32_t *pa)
     uint32_t task_pdt_va, task_pdt_pa;
     if(mmu_alloc(kernel_pdt, &task_pdt_va, &task_pdt_pa, PAGE_SUPERVISOR|PAGE_PRESENT|PAGE_RW)==E_MMU_SUCCESS)
     { 
-        memset((pde_t*)task_pdt_va, 0, PAGE_SIZE);
+        pde_t *pdt = (pde_t*) task_pdt_va;
+        memset(pdt, 0, PAGE_SIZE);
         
-        //Mapeamos el kernel desde 0 hasta 4mb*kernel_pages_count
-        //Y tambien desde 2gb hasta 2gb+4mb*kernel_pages_count para que al inicializar
-        //paginacion y luego cambiar la dummy_gdt por la final, funcione todo correctamente
+        //Vamos a mapear toda la memoria fisica disponible a partir de 0x80...0
+        //Cantidad de frames de tamaño 4mb
+        uint32_t large_frames_count = page_frames_count / 1024;
+        //Cantidad de frames de 4kb que sobran (siempre menor a 1024)
+        uint32_t small_frames_count = page_frames_count % 1024;
+        //Primero mapeamos todos los frames de 4mb
         uint32_t i;
-        uint32_t kernel_pages_count = kernel_physical_end / LARGE_PAGE_SIZE;
-        if(kernel_physical_end % LARGE_PAGE_SIZE)
+        for(i=0; i<large_frames_count; i++)
         {
-            kernel_pages_count++;
+            pdt[i+512] = (i << 22) | PAGE_PRESENT | PAGE_SUPERVISOR | PAGE_RW | PAGE_4MB;
         }
-        
-        for(i=0; i<kernel_pages_count; i++)
+        //Si quedan frames por mapear, lo hacemos en una page table adicional (una para kernel y otra para user)
+        page_frame_t *new_frame = mmu_pop_free_frame();
+        if(new_frame==NULL)
         {
-            ((pde_t*)task_pdt_va)[i+512]   = ((i*LARGE_PAGE_SIZE) << 12) | PAGE_4MB | PAGE_PRESENT | PAGE_SUPERVISOR | PAGE_RW;
+            mmu_free(kernel_pdt, task_pdt_va);
+            return E_MMU_NO_MEMORY;
+        }
+        uint32_t pte_pa = mmu_page_frame_2_PA(new_frame);
+        pde_t *pte = (pde_t*)PA2KVA(pte_pa);
+                
+        //Mapeamos la nueva ptable
+        pdt[i+512] = pte_pa | PAGE_PRESENT | PAGE_SUPERVISOR | PAGE_RW;
+        
+        //Ahora mapeamos el resto
+        i = 0;
+        while(i < small_frames_count)
+        {
+            pte[i]   = (large_frames_count * LARGE_PAGE_SIZE + i*PAGE_SIZE) | PAGE_PRESENT | PAGE_SUPERVISOR | PAGE_RW;
         }
 
         *va = task_pdt_va;

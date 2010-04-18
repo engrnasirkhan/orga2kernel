@@ -199,7 +199,7 @@ void kmain(multiboot_info_t* mbd, unsigned int magic ){
 	
 	crear_tarea(prueba1,0);
 	
-	//crear_tarea(prueba2,1);
+	crear_tarea(prueba2,1);
 	
 	sti();
 	
