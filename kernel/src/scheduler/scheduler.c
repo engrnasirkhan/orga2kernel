@@ -14,7 +14,10 @@
 #define limite_nueva_tss 0x67
 
 void pruebaFuncion(){
- while(1) kprint(" Funciona ");	
+	__asm__ __volatile__ ("xchg %bx,%bx");	
+	__asm__ __volatile__ ("int $80");	
+		
+ //while(1) kprint(" Funciona ");	
 }
 
 
@@ -39,6 +42,8 @@ kprint("        ej:  quantum numero_de_slot 13 \n \n \n\n \n \n \n \n");
 
 //Funcion de scheduler
 void scheduler(){	
+	__asm__ __volatile__ ("xchg %bx,%bx" );
+	__asm__ __volatile__ ("xchg %bx,%bx" );
 	//Paso a la siguiente potencialmente ejecutable tarea
 	do {
 		tarea_activa = (tarea_activa + 1) % 10;	
@@ -125,22 +130,30 @@ void iniciar_scheduler(){
 }
 
 
+
+
+
+
 //Funcion para crear una nueva tarea
 void crear_tarea(programs_t programa, char numero_tarea){
 //Esta funcion va a tomar un programs_t, char con el numero donde lo quiere poner y apartir de ahi va a crear una tarea.
 //Esta funcion se debe ejecutar siempre en el contexto del kernel
-	int i;
+	//int i;
 	cli();
 
 
 //Si ya habia una tarea corriendo en ese slot, la mato ya la reemplazo
 	if(tareas[numero_tarea].hay_tarea) matar_tarea(numero_tarea);
 
+
+
 //Creamos nuevo directorio tabla de pagina
 	
 	uint32_t fisica_dtp;
     uint32_t virtual_dtp;
     if ((mmu_install_task_pdt(&virtual_dtp,&fisica_dtp)) == E_MMU_NO_MEMORY) kprint("Error al crear Tabla de Paginas ");
+
+
 
 
 //Pido pagina para nueva tss (esto lo hago desde la pdt del kernel)
@@ -210,6 +223,17 @@ void crear_tarea(programs_t programa, char numero_tarea){
 	uint32_t *pro = &(pruebaFuncion);
 	for(int a=0; a<1024;a++) aFisicaDeprograma[a] = pro[a];
 	*/
+	
+	///otra prueba
+	//__asm__ __volatile__ ("xchg %bx,%bx");
+	//uint32_t espacio_libre_virtual = (uint32_t *) kmalloc(256);
+	uint32_t espacio_libre_virtual = 	0xf0000000;
+	mmu_map_pa2va((pde_t *) PA2KVA(getCR3()), fisica_codigo, espacio_libre_virtual, PAGE_USER,1);
+	int *destino = espacio_libre_virtual;
+	int *origen = &(pruebaFuncion);
+	for(int k=0;  k< 100; k++ )destino[k]= origen[k];
+	
+	
 
 //Pido pagina para pila en el contexto de la nueva tarea y la mapeo a la pdt de la tarea 
 	uint32_t virtual_pila;
@@ -259,7 +283,8 @@ void crear_tarea(programs_t programa, char numero_tarea){
 	tareas[numero_tarea].pantalla = (char *) virtual_video_kernel;
 
 
-	if (tarea_activa < 0) scheduler();
+
+	//if (tarea_activa < 0) scheduler();
 	sti();
 }
 
