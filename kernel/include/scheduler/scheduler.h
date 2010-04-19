@@ -10,12 +10,12 @@
 
 #define offset_gdt_tareas 10
 #define tam_buffer_pantalla 8000
-#define quantum_default 1000;
+#define quantum_default 18;
 
 typedef struct {
 	char hay_tarea;						//1 si hay una tarea mapeada
-    unsigned int quantum_fijo;			//Cuantum que se renueva cada vez que vence el actual
-	unsigned int quantum_actual;		//Cuantum que va decreciendo
+   int quantum_fijo;			//Cuantum que se renueva cada vez que vence el actual
+	int quantum_actual;		//Cuantum que va decreciendo
 	char *pantalla;						//Direccion virtual de pantalla, con respecto de Pdt Kernel
 	void *va_tss;
 	void *pa_tss;
@@ -52,6 +52,7 @@ void iniciar_scheduler();
 
 
 //Funcion para crear una nueva tarea
-void crear_tarea(programs_t programa, char numero_tarea);
+void crear_tarea(programs_t *programa, char id);
+void crear_kthread(programs_t *programa, char id);
 
 #endif // __SCHEDULER__H__

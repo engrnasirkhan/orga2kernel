@@ -19,7 +19,7 @@ ifeq ($(shell uname -m),x86_64)
 endif
 
 # Flags normales y modificables
-CFLAGS ?= #-march=core2 -Os -fomit-frame-pointer -Wall -s
+CFLAGS ?= -g -ggdb -pipe #-march=core2 -Os -fomit-frame-pointer -Wall -s
 CXXFLAGS ?= $(CFLAGS)
 ASFLAGS ?= 
 CASFLAGS ?=

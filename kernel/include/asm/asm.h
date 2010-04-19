@@ -14,6 +14,9 @@
 #define __init_bss __attribute__ ((section (".init.bss")))
 #define __noreturn __attribute__ ((noreturn))
 
+#define USER_FLAGS 0x202
+#define KERNEL_FLAGS 0x202
+
 /** @brief Carga el registro GDTR con la información suministrada. */
 extern void lgdt( void *gdtr );
 /*void  lgdt( void *gdtr ) {
@@ -69,5 +72,8 @@ static inline uint8_t inb( uint16_t port ) {
 #define outb(p,v) __asm__ __volatile__("outb %%al, %%dx" : : "al"(v), "dx"(p) )
 #define outw(p,v) __asm__ __volatile__("outw %%al, %%dx" : : "ax"(v), "dx"(p) )
 #define outd(p,v) __asm__ __volatile__("outd %%al, %%dx" : : "eax"(v), "dx"(p) )
+
+#define mask_ints(f) __asm__ __volatile__( "pushfl\n\tpopl %0\n\tcli" : "=rm"(f) )
+#define unmask_ints(f) __asm__ __volatile__( "pushl %0\n\tpopfl" : : "rm"(f) )
 
 #endif // __ASM__H__

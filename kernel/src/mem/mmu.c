@@ -142,6 +142,44 @@ static uint32_t free_page_frame_count = 0;
 //la Page Directory Table del kernel
 static pde_t kernel_pdt[1024]  __attribute__ ((aligned (4096)));
 
+static void mmu_save_modules( multiboot_info_t *mbd ) {
+	memory_map_t *mmap;
+	module_t *mod;
+	uint32_t i;
+	uint32_t last_address;
+	uint32_t paginas;
+
+	if ( !mbd->flags & 8 ) return;
+
+	/* Obtengo la última dirección utilizable, que por ahora
+	 * supongo que alcanza para copiar los módulos :-P
+	 */
+	for ( mmap = (memory_map_t *) PA2KVA(mbd->mmap_addr);
+		(uint32_t) mmap < PA2KVA(mbd->mmap_addr + mbd->mmap_length);
+		mmap = (memory_map_t *) (mmap + mmap->size + sizeof(mmap->size)))
+	{
+		if ( mmap->type != 1 ) continue;
+		last_address = mmap->base_addr_low + mmap->length_low;
+	}
+
+	/* La dejamos en un múltiplo de página. */
+	last_address &= 0xFFFFF000;
+	last_address = PA2KVA(last_address);
+
+	/* Copiamos los módulos. */
+	for ( i = 0, mod = (module_t *) mbd->mods_addr;
+		i < mbd->mods_count;
+		i++, mod++ ) {
+		paginas = (mod->mod_end - mod->mod_start) >> 12;
+		if (paginas == 0) paginas++;
+		last_address -= PAGE_SIZE * paginas;
+
+		memcpy( (void *)last_address, (void *) PA2KVA(mod->mod_start), mod->mod_end - mod->mod_start );	
+		mod->mod_start = last_address;
+		mod->mod_end = last_address + paginas * PAGE_SIZE;
+	}
+}
+
 //Inicializa las estructuras relacionadas con la admin de memoria
 void mmu_init(multiboot_info_t* mbd)
 {  
@@ -155,6 +193,8 @@ void mmu_init(multiboot_info_t* mbd)
     
     //inicializamos la cantidad de paginas de LARGE_PAGE_SIZE que ocupa el kernel
     uint32_t kernel_pages_count = 0;
+
+	 mmu_save_modules( mbd );
     
     //Si tenemos disponible el mapa de memoria del GRUB, usarlo!
     if(mbd->flags & 0x0020)
@@ -626,3 +666,14 @@ uint8_t mmu_install_task_pdt(uint32_t *va, uint32_t *pa)
     }
 }
 
+uint8_t mmu_kalloc( uint32_t *va ) {
+	uint32_t pa;
+
+	page_frame_t *free_frame = mmu_pop_free_frame();
+	if (!free_frame) return E_MMU_NO_MEMORY;
+	free_frame->ref_count++;
+	
+	pa = mmu_page_frame_2_PA(free_frame);
+	*va = PA2KVA(pa);
+	return E_MMU_SUCCESS;
+}

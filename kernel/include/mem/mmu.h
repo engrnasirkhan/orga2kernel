@@ -144,4 +144,15 @@ uint8_t mmu_install_task_pdt(uint32_t *va, uint32_t *pa);
  */
 uint8_t mmu_uninstall_task_pdt(pde_t *task_pdt);
 
+/**
+ * Toma un frame fisico libre de 4kb y devuelve su dirección virtual en el contexto del kernel.
+ *
+ * @param va  Puntero donde se guarda la dirección virtual.
+ * @return Devuelve E_MMU_SUCCESS si se pudo realizar el alloc correctamente, o E_MMU_NO_MEMORY en caso de error
+ * @see mmu_free
+ * @see mmu_alloc_at_VA
+ * @see mmu_map_pa2va
+ */
+uint8_t mmu_kalloc( uint32_t *va );
+
 #endif //__MMU__H__

@@ -14,6 +14,8 @@
 #include <drivers/keyboard.h>
 #include <tty/tty.h>
 #include <scheduler/scheduler.h>
+#include <mem/mmu.h>
+#include <drivers/pic8259A.h>
 
 //funcion que inicializa gran parte de las estructuras del kernel
 extern void kinit ( multiboot_info_t* mbd ) __init;
@@ -86,8 +88,19 @@ static void ejecutar ( unsigned long phys_start, unsigned long phys_end, char *c
 	kprint ( "El programa devolvio el codigo de salida: %d\n", ret_status );
 }
 
+/* Nota, hay que mandarle el EOI al PIC porque scheduler() NO vuelve,
+ * Si no le mandamos el EOI nosotros no se lo manda nadie.
+ * Además, hay que mandarle el EOI antes de hacer el cambio de contexto,
+ * si lo hacemos después lo vamos a estar haciendo dos veces.
+ * Una vez cuando nos vuelve a tocar la ejecución y volvemos de scheduler()
+ * y la otra cuando volvemos al despachador de interrupciones.
+ */
 int timer( struct registers *r ) {
 	#define TIEMPO_ACTUALIZCION 250  //Totalmente arbitrario
+	if (tarea_activa == -1) {
+		pic8259A_send_EOI( r->nro );
+		scheduler();
+	}
 		
 	//Referente a la actualizacion de pantalla activa
 	/*++contador_actualizar_pantalla;
@@ -103,10 +116,11 @@ int timer( struct registers *r ) {
 	--tareas[tarea_activa].quantum_actual;
 	
 	//si termino, reestablecemos y cambiamos a la proxima llamando a scheduler
-	if (tareas[tarea_activa].quantum_actual==0){		
+	if (tareas[tarea_activa].quantum_actual<=0){		
 			//Restablecemos quantums gastado
 			tareas[tarea_activa].quantum_actual = tareas[tarea_activa].quantum_fijo; 
 			//Llamamos al scheduler para que elija proxima tarea
+			pic8259A_send_EOI( r->nro );
 			scheduler();
 	}
 
@@ -123,17 +137,11 @@ int pf( struct registers *r ) {
 	kprint( "CR2: 0x%x\nDir: 0x%x:0x%x\n",
 		getCR2(),
 		r->cs, r->eip );
-	for (;;) __asm__ __volatile__ ( "hlt" );
+	for (;;) hlt();
 }
 
-void pruebatarea(){
-	
-while (1) kprint("HOLA");	
-}
-
-void pruebatarea2() {
-	for(;;) kprint("chau");
-}
+void pruebatarea()  { for (;;) kprint("HOLA"); }
+void pruebatarea2() { for (;;) kprint("chau"); }
 
 
 void kmain(multiboot_info_t*, unsigned int magic ) __noreturn;
@@ -148,6 +156,8 @@ void kmain(multiboot_info_t* mbd, unsigned int magic ){
     
     //Ahora si, usando mbd que apunta bien a los datos del grub, inicializamos todo
     kinit( mbd );
+
+#if 0
     // Ejecutemos módulo por módulo.
     if ( mbd->flags & 8 ) {
         module_t *mod;
@@ -160,6 +170,8 @@ void kmain(multiboot_info_t* mbd, unsigned int magic ){
         }
     }  
     
+#endif
+#if 0
     kprint("llego\n");
     key_init();
     key_register(menu, 1);
@@ -178,23 +190,39 @@ void kmain(multiboot_info_t* mbd, unsigned int magic ){
     if(tty_init(&kernel_tty, NULL)){
         panic("fallo  el inicio de las tty");
     }
+#endif
 	//Lanzamos programa para cargar tareas y modificar quantums.
 	set_isr_handler( 14, &pf ); // #PF
 
 	//Iniciamos Scheduler
 	iniciar_scheduler();
-    
-	programs_t prueba1;
-	prueba1.va_entry = &(pruebatarea);
-	prueba1.va_text = &(pruebatarea);
-	
-	programs_t prueba2;
-	prueba2.va_entry = &pruebatarea2;
-	prueba2.va_text = &pruebatarea2;
-	
-	crear_tarea(prueba1,0);
-	
-	crear_tarea(prueba2,1);
+
+#if 0
+	/* Ejecutamos TODOS los módulos */
+	if ( mbd->flags & 8 ) {
+        module_t *mod;
+        unsigned long i;
+		for ( i = 0, mod = (module_t *) mbd->mods_addr;
+			i < mbd->mods_count;
+			i++, mod++ )
+			{
+				programs_t *p = (programs_t *) mod->mod_start;
+				if ( (uint32_t)p->magic != 0x00455845 ) continue;
+				crear_tarea( (programs_t *) mod->mod_start, i );
+			}
+	}
+#else
+	programs_t p1, p2;
+
+	p1.va_entry = pruebatarea;
+	p2.va_entry = pruebatarea2;
+
+	crear_kthread( &p1, 0 );
+	crear_kthread( &p2, 1 );
+#endif
+
+	set_irq_handler( 0, &timer );
+	//set_irq_handler( 1, &teclado );
 	
 	sti();
 

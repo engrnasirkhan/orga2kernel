@@ -11,15 +11,9 @@
 #include <screen/screen.h>
 #include <kernel/panic.h>
 #include <drivers/keyboard.h>
+#include <string.h>
 
 #define limite_nueva_tss 0x67
-
-void pruebaFuncion(){
-	__asm__ __volatile__ ("xchg %bx,%bx");	
-	__asm__ __volatile__ ("int $80");	
-		
- //while(1) kprint(" Funciona ");	
-}
 
 //Funcion que muestra menu
 void menu(key s){
@@ -42,12 +36,16 @@ kprint("        ej:  quantum numero_de_slot 13 \n \n \n\n \n \n \n \n");
 
 //Funcion de scheduler
 void scheduler(){	
-	__asm__ __volatile__ ("xchg %bx,%bx" );
-	__asm__ __volatile__ ("xchg %bx,%bx" );
+	uint32_t i;
 	//Paso a la siguiente potencialmente ejecutable tarea
-	do {
-		tarea_activa = (tarea_activa + 1) % 10;	
-	} while ( !tareas[tarea_activa].hay_tarea );
+	for ( i = 0; i < 10; i++ ) {
+		tarea_activa = (tarea_activa + 1) % 10;
+		if ( tareas[tarea_activa].hay_tarea ) break;
+	}
+	if ( !tareas[tarea_activa].hay_tarea ) {
+		tarea_activa = -1;
+		return;
+	}
 	
 	//Chequeo indice en la gdt de la proxima tarea a ejecutar
 	char gdt_indice = offset_gdt_tareas + tarea_activa;
@@ -58,7 +56,7 @@ void scheduler(){
 
 	kprint( "Saltando a tarea: %d, %d, %x\n", tarea_activa, gdt_indice, selector_prox );
 	kprint( "CR3: %x\n", ((tss_t *) tareas[tarea_activa].va_tss)->cr3 );
-
+	__asm__ __volatile__ ("xchg %bx,%bx" );
 	__asm__ __volatile__ (
 		"pushl %0\n\t"
 		"pushl $0\n\t"
@@ -69,9 +67,10 @@ void scheduler(){
 }
 
 //Funcion para matar tarea
+//Debe ejecutarse en contexto kernel
 void matar_tarea(char numero_tarea){
-	//Debe ejecutarse en contexto kernel
-	cli();
+	reg_t flags;
+	mask_ints(flags);
 
 //Voy a borrar las cosas que pueda en contexto de kernel
     kfree(tareas[numero_tarea].pantalla);
@@ -84,7 +83,7 @@ void matar_tarea(char numero_tarea){
 //Voy a pasarle la direccion de la pdt a un funcion de mmu para que libera todo lo respecto a ella
 	///TODO: faltaria funcion que le pase una pdt y borre todo lo referido a esta
 	
-	sti();
+	unmask_ints(flags);
 }
 
 
@@ -131,162 +130,178 @@ void iniciar_scheduler(){
 }
 
 
+/**
+ * @brief Crea un kernel thread.
+ *
+ * A partir de los datos en @b programa genera el nuevo proceso. No crea
+ * ningún mapa de memoria, ya que cualquier le viene bien (pues se ejecuta
+ * en el contexto del kernel).
+ */
+void crear_kthread( programs_t *programa, char id ) {
+	reg_t flags;
+	uint32_t tss_va, pila_va;
+	struct tss *nueva_tss;
 
-
-
-
-//Funcion para crear una nueva tarea
-void crear_tarea(programs_t programa, char numero_tarea){
-//Esta funcion va a tomar un programs_t, char con el numero donde lo quiere poner y apartir de ahi va a crear una tarea.
-//Esta funcion se debe ejecutar siempre en el contexto del kernel
-	//int i;
-	cli();
-
-
-//Si ya habia una tarea corriendo en ese slot, la mato ya la reemplazo
-	if(tareas[numero_tarea].hay_tarea) matar_tarea(numero_tarea);
-
-
-
-//Creamos nuevo directorio tabla de pagina
+	if ( !programa || id < 0 ) return;
 	
-	uint32_t fisica_dtp;
-    uint32_t virtual_dtp;
-    if ((mmu_install_task_pdt(&virtual_dtp,&fisica_dtp)) == E_MMU_NO_MEMORY) kprint("Error al crear Tabla de Paginas ");
-
-
-
-
-//Pido pagina para nueva tss (esto lo hago desde la pdt del kernel)
-	uint32_t fisica_tss;
-    uint32_t virtual_tss;
-    uint8_t perm = PAGE_PRESENT | PAGE_RW | PAGE_SUPERVISOR; 
-	if ((mmu_alloc( (pde_t *) PA2KVA(getCR3()) , &virtual_tss, &fisica_tss, perm)) == E_MMU_NO_MEMORY) kprint("Error al crear TSS nueva tarea");
-	tareas[numero_tarea].va_tss = (void *) virtual_tss;
-	tareas[numero_tarea].pa_tss = (void *) fisica_tss;
-	struct tss *nueva_tss = (struct tss *) virtual_tss;
-
-	// Mapeamos la TSS de la tarea y la del kernel en el espacio de direcciones
-	// de la tarea.
-	uint32_t tss_kernel = gdt_get_base( g_GDT + 5 );
-	uint32_t permisos = PAGE_PRESENT | PAGE_RW | PAGE_SUPERVISOR;
-	kprint( "Mapeando(0x%x) 0x%x --> 0x%x\n", virtual_dtp, virtual_tss, fisica_tss );
-	mmu_map_pa2va( (pde_t *) virtual_dtp, fisica_tss, virtual_tss, permisos, 1 );
-	kprint( "Mapeando(0x%x) 0x%x --> 0x%x\n", virtual_dtp, KVA2PA(tss_kernel), tss_kernel );
-	mmu_map_pa2va( (pde_t *) virtual_dtp, KVA2PA(tss_kernel), tss_kernel, permisos, 1 );
-
-#if 0
-	// Mapeamos las TSS de todas las tareas en la tarea actual
-	for ( i = 0; i < sizeof(tareas)/sizeof(tarea); i++ ) {
-		pde_t *pde = PA2KVA(getCR3());
-		if ( i == tarea_activa ) continue;
-		if ( tareas[i].hay_tarea == 0 ) continue;
-		kprint( "TSS: %x(%x)\nPDE:%x(%x)\n",
-			tareas[i].va_tss, tareas[i].pa_tss, pde, getCR3() );
-		if ( page_map_pa2va( (pde_t *) PA2KVA(getCR3()),
-			(uint32_t) tareas[i].pa_tss,
-			(uint32_t) tareas[i].va_tss,
-			PAGE_PRESENT | PAGE_RW | PAGE_SUPERVISOR,
-			1 ) != E_MMU_SUCCESS )
-			panic ( "No pude mapear la TSS de los demás procesos :-(" );
+	/* TODO: No gastar una página entera para la TSS... usar kmalloc + alineación. */
+	if ( mmu_kalloc( &tss_va ) != E_MMU_SUCCESS ) {
+		kprint( "Error al obtener una página para la TSS.\n" );
+		return;
 	}
 
-	// Mapeamos nuestra TSS en todas las otras tareas
-	for ( i = 0; i < sizeof(tareas)/sizeof(tarea); i++ ) {
-		if ( tareas[i].hay_tarea == 0 ) continue;
-		tss_t *tss;
-		pde_t *pde;
-		tss = (tss_t *) PA2KVA( tareas[i].pa_tss );
-		pde = (pde_t *) PA2KVA( tss->cr3 );
-		kprint( "TSS: %x(%x)\nPDE: %x(%x)\n", tss, tareas[i].pa_tss, pde, tss->cr3 );
-		if ( page_map_pa2va( pde, (uint32_t) fisica_tss, (uint32_t) virtual_tss,
-			PAGE_PRESENT | PAGE_RW | PAGE_SUPERVISOR,
-			1 ) != E_MMU_SUCCESS )
-			panic ( "No pude mapear mi TSS en los demás procesos :-(" );
+	if ( mmu_kalloc( &pila_va ) != E_MMU_SUCCESS ) {
+		kprint( "Error al obtener pila para el thread del kernel.\n" );
+		return;
 	}
-#endif
-//Pido pagina para codigo en el contexto de la nueva tarea y la mapeo a la pdt nueva
-	///TODO: Hasta ahora solo agarra una pagina para el codigo, habria que agarrar las que hagan falta.
-	uint32_t virtual_codigo;
-	uint32_t fisica_codigo;
-    if ((mmu_alloc((uint32_t *)virtual_dtp, &virtual_codigo, &fisica_codigo, perm)) == E_MMU_NO_MEMORY) kprint("Error pedir pag codigo nueva tarea");
 
+	nueva_tss = (struct tss *) tss_va;
+	memset( nueva_tss, 0, sizeof( struct tss ) );
+	nueva_tss->cr3 = getCR3();
+	nueva_tss->eflags = KERNEL_FLAGS;
+	nueva_tss->eip = (uint32_t) programa->va_entry;
+	nueva_tss->esp = pila_va;
+	nueva_tss->cs = KERNEL_CS;
+	nueva_tss->ds = KERNEL_DS;
+	nueva_tss->es = KERNEL_DS;
+	nueva_tss->ss = KERNEL_DS;
+	nueva_tss->fs = KERNEL_DS;
+	nueva_tss->gs = KERNEL_DS;
 
+	/* Sección crítica... nos metemos con las tareas. */
+	mask_ints(flags);
+	if ( tareas[id].hay_tarea ) matar_tarea( id );
 
-//Copiar de donde estaba al codigo a la(s) nueva(s) pagina(s)
-	///TODO: 
-	/*
-	 * Aca estaba probando algo q no va
-	uint32_t *aFisicaDeprograma =0x10000000;
-	
-	if( (page_map_pa2va(PA2KVA(getCR3()) , fisica_codigo,aFisicaDeprograma,PAGE_USER|PAGE_RW|PAGE_PRESENT, 1))==E_MMU_NO_MEMORY) kprint("Error page_map_pa2va  1 ");
-	
-	uint32_t *pro = &(pruebaFuncion);
-	for(int a=0; a<1024;a++) aFisicaDeprograma[a] = pro[a];
-	*/
-	
-	///otra prueba
-	//__asm__ __volatile__ ("xchg %bx,%bx");
-	//uint32_t espacio_libre_virtual = (uint32_t *) kmalloc(256);
-	uint32_t espacio_libre_virtual = 	0xf0000000;
-	mmu_map_pa2va((pde_t *) PA2KVA(getCR3()), fisica_codigo, espacio_libre_virtual, PAGE_USER,1);
-	int *destino = espacio_libre_virtual;
-	int *origen = &(pruebaFuncion);
-	for(int k=0;  k< 100; k++ )destino[k]= origen[k];
-	
-	
+	tareas[id].hay_tarea = 1;
+	tareas[id].va_tss = (void *) tss_va;
+	tareas[id].pa_tss = (void *) KVA2PA(tss_va);
+	tareas[id].quantum_fijo = quantum_default;
+	tareas[id].quantum_actual = 0;
 
-//Pido pagina para pila en el contexto de la nueva tarea y la mapeo a la pdt de la tarea 
-	uint32_t virtual_pila;
-	uint32_t fisica_pila;
-	if ((mmu_alloc((uint32_t *)virtual_dtp, &virtual_pila, &fisica_pila, perm))== E_MMU_NO_MEMORY) kprint("Error pedir pag pila nueva tarea");
+	/* Ya mapeamos todo, ahora construimos la TSS :-) */
+	gdt_fill_tss_segment( g_GDT + id + offset_gdt_tareas, (void *) tss_va, 0x67, 0 );
 
-
-//Agrego una entrada nueva de GDT
-	gdt_fill_tss_segment( &(g_GDT[numero_tarea+ offset_gdt_tareas]) , (void *) virtual_tss , limite_nueva_tss, 3);
- 
-//Lleno tss
-	nueva_tss->cr3=	fisica_dtp;
-
-/*#define USER_CS 0x1B
-#define USER_DS 0x23*/
-#define USER_CS 0x08
-#define USER_DS 0x10
-	nueva_tss->eip =  virtual_codigo;///TODO: Esto podria no ser cierto, podria tener otro entry point
-	nueva_tss->eflags= 0x296; //Por poner alguno valido ( NOTE: IF ).
-	nueva_tss->ebp= virtual_pila;
-	nueva_tss->esp= virtual_pila;
-	nueva_tss->cs= USER_CS;
-	nueva_tss->ds= USER_DS;
-	nueva_tss->es= USER_DS;
-	nueva_tss->ss= USER_DS;
-	nueva_tss->fs= USER_DS;
-	nueva_tss->gs= USER_DS;
-	
-	
-//Creo una pagina nueva, en el contexto del kernel, que va a funcionar como buffer de video para la nueva tarea
-//Mapeo la direccion 0xb8000 de la tarea nueva, con la direccion fisica de la pagina que pedi recien
-	
-	//Pido pagina para buffer mapeado en kernel, la pido con mmu_alloc para tener tambien la fisica
-	uint32_t virtual_video_kernel;
-	uint32_t fisica_video_kernel;
-	if ((mmu_alloc( (pde_t *) PA2KVA(getCR3()), &virtual_video_kernel, &fisica_video_kernel, perm))== E_MMU_NO_MEMORY) kprint("Error pedir pag buffer video nueva tarea");
-	
-	
-	//mapeo 0xb8000, con la direccion fisica de nuevo_buffer_video en nueva pdt
-	if( (mmu_map_pa2va( (pde_t *) virtual_dtp, fisica_video_kernel,0xb8000,PAGE_USER,1))!=E_MMU_SUCCESS) kprint("Error page_map_pa2va");
-	
-//Modifico las variables correspondientes al scheduler y tarea
-	
-	tareas[numero_tarea].hay_tarea= 1;
-	tareas[numero_tarea].quantum_fijo = quantum_default;
-	tareas[numero_tarea].quantum_actual = 0;
-	tareas[numero_tarea].pantalla = (char *) virtual_video_kernel;
-
-
-
-	//if (tarea_activa < 0) scheduler();
-	sti();
+	unmask_ints(flags);
 }
 
+/**
+ * @brief Crea un nuevo proceso.
+ *
+ * A partir de los datos almacenados en @b programa genera
+ * el espacio de direcciones del nuevo proceso.
+ *
+ * @param[in] programa El mapa de memoria del proceso.
+ * @param[in] id Indica el número de slot a utilizar por la tarea.
+ */
+void crear_tarea( programs_t *programa, char id ) {
+	reg_t flags;
+	uint32_t pdt_va, pdt_pa;
+	uint32_t tss_va, tss_pa;
+	uint32_t paginas, i;
+	uint32_t va, pa;
+	pde_t *pdt;
+	struct tss *nueva_tss;
 
+	if ( !programa || id < 0 ) return;
+
+	/* ¿Es una tarea del kernel o del usuario? */
+	if ( (uint32_t) programa->va_entry >= KERNEL_MEMMAP )
+
+	if ( mmu_install_task_pdt( &pdt_va, &pdt_pa ) != E_MMU_SUCCESS ) {
+		kprint( "No se pudo obtener memoria para el nuevo PDT.\n" );
+		return;
+	}
+	pdt = (pde_t *) pdt_va;
+
+	/* TODO: Necesitamos una función que obtenga una frame y lo marque como
+	 * usado, pero que NO lo mapee en el espacio de usuario.
+	 * TODO: No gastar una página entera para la TSS... usar kmalloc + alineación.
+	 */
+	if ( mmu_alloc( pdt, &tss_va, &tss_pa, PAGE_PRESENT | PAGE_RW | PAGE_SUPERVISOR )
+		!= E_MMU_SUCCESS ) {
+		kprint( "Error al obtener una página para la TSS.\n" );
+		return;
+	}
+
+	nueva_tss = (struct tss *) PA2KVA(tss_pa);
+
+	/* El código no necesitamos copiarlo, pues es RO */
+	va = (uint32_t) programa->va_text;
+	pa = (uint32_t) KVA2PA(programa);
+	paginas = (programa->va_data - programa->va_text) >> 12;
+	if ( !paginas ) {
+		kprint( "Información de programa errónea.\n" );
+		return;
+	}
+	for ( i = 0; i < paginas; i++ ) {
+		if ( mmu_map_pa2va( pdt, pa, va, PAGE_PRESENT | PAGE_READONLY | PAGE_USER, 0 )
+			!= E_MMU_SUCCESS ) {
+			kprint( "Error al mapear 0x%x en 0x%x\n", pa, va );
+			return;
+		}
+		pa += PAGE_SIZE;
+		va += PAGE_SIZE;
+	}
+
+	/* Hasta acá ya tenemos mapeado el código, hay que hacer lo mismo con los datos.
+	 * Hay que tener en cuenta que los datos sí hay que copiarlos.
+	 */
+	paginas = programa->va_bss - programa->va_data;
+	for ( i = 0; i < paginas; i++ ) {
+		if ( mmu_alloc_at_VA( pdt, va, PAGE_PRESENT | PAGE_RW | PAGE_USER, 0 ) !=
+			E_MMU_SUCCESS ) {
+			kprint( "Error al obtener una página en la dirección virtual 0x%x\n", va );
+			return;
+		}
+
+		/* Copiamos los datos. */
+		memcpy( (void *)va, (void *)pa, PAGE_SIZE );
+		pa += PAGE_SIZE;
+		va += PAGE_SIZE;
+	}
+
+	/* Ahora hay que mapear la sección BSS, y llenarla de ceros. */
+	paginas = programa->va_bssend - programa->va_bss;
+	for ( i = 0; i < paginas; i++ ) {
+		if ( mmu_alloc_at_VA( pdt, va, PAGE_PRESENT | PAGE_RW | PAGE_USER, 0 ) !=
+			E_MMU_SUCCESS ) {
+			kprint( "Error al obtener una página en la dirección virtual 0x%x\n", va );
+			return;
+		}
+		memset( (void *)va, 0, PAGE_SIZE );
+		va += PAGE_SIZE;
+	}
+
+	/* Ahora pedimos un espacio cualquier para la pila. */
+	if ( mmu_alloc( pdt, &va, &pa, PAGE_PRESENT | PAGE_RW | PAGE_USER ) != E_MMU_SUCCESS ) {
+		kprint( "Error al pedir pila para el proceso.\n" );
+		return;
+	}
+
+	memset( nueva_tss, 0, sizeof( struct tss ) );
+	nueva_tss->cr3 = pdt_pa;
+	nueva_tss->eflags = USER_FLAGS; //0x296;
+	nueva_tss->eip = (uint32_t) programa->va_entry;
+	nueva_tss->esp = va;
+	nueva_tss->cs = USER_CS;
+	nueva_tss->ds = USER_DS;
+	nueva_tss->es = USER_DS;
+	nueva_tss->ss = USER_DS;
+	nueva_tss->fs = USER_DS;
+	nueva_tss->gs = USER_DS;
+
+	/* Ahora viene la sección crítica... cuando nos metemos con las tareas. */
+	mask_ints(flags);
+	if ( tareas[id].hay_tarea ) matar_tarea( id );
+
+	tareas[id].hay_tarea = 1;
+	tareas[id].va_tss = (void *) PA2KVA(tss_pa);
+	tareas[id].pa_tss = (void *) tss_pa;
+	tareas[id].quantum_fijo = quantum_default;
+	tareas[id].quantum_actual = 0;
+
+	/* Ya mapeamos todo, ahora construimos la TSS :-) */
+	gdt_fill_tss_segment( g_GDT + id + offset_gdt_tareas, (void *) PA2KVA(tss_pa), 0x67, 0 );
+
+	unmask_ints(flags);
+}

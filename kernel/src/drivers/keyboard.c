@@ -53,7 +53,6 @@ struct key_handler_node * key_is_registered(key tecla){
 
 
 int irq_keyboard( struct registers *r ) {
-	cli();
 	key tecla = inb( 0x60 );
     key_control control = inb(0x64);
     if( !(tecla & 0x80) ){
@@ -65,6 +64,5 @@ int irq_keyboard( struct registers *r ) {
             tty_put_key(tecla);
         }
     }
-	sti();
 	return 0;
 }

@@ -3,6 +3,7 @@
 
 #define KERNEL_PHYSICAL_START       0x00100000
 #define KERNEL_VIRTUAL_START        0x80100000
+#define KERNEL_MEMMAP               0x80000000
 
 //Definimos el heap para el kernel
 #define KERNEL_HEAP_START           0xC0000000
@@ -17,5 +18,10 @@
 
 #define PAGE_SIZE          (0x1000)
 #define LARGE_PAGE_SIZE   (0x400000)
+
+#define KERNEL_CS 0x08
+#define KERNEL_DS 0x10
+#define USER_CS 0x18
+#define USER_DS 0x20
 
 #endif
