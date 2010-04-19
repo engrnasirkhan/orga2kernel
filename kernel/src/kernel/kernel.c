@@ -19,73 +19,20 @@
 
 //funcion que inicializa gran parte de las estructuras del kernel
 extern void kinit ( multiboot_info_t* mbd ) __init;
-static reg_t mapa_programa[1024] __attribute__ ((aligned (4096)));
 
-static void ejecutar ( unsigned long phys_start, unsigned long phys_end, char *cmdline ) {
-	programs_t *p = (programs_t *) phys_start;
-	unsigned int *cr3;
-	reg_t entrada_vieja;
-	int ret_status;
-
-	if ( p->magic[0] != 'E' ||
-		p->magic[1] != 'X' ||
-		p->magic[2] != 'E' ||
-		p->magic[3] != 0 ) {
-		kprint( "Modulo no reconocido :-(\n" );
-		return;
-	}
-
-	// Llenamos de cero el mapa del programa.
-	for ( int i = 0; i < 1024; i++ )
-		mapa_programa[i] = 0;
-	
-	// Páginas de código.
-	int paginas = ((unsigned int) p->va_data - (unsigned int) p->va_text) >> 12;
+/* ebx = fd de salida.
+ * ecx = puntero (en espacio de usuario).
+ * edx = tamaño.
+ */
+int sys_write( struct registers *r ) {
 	int i;
-	for ( i = 0; i < paginas; i++ )
-		mapa_programa[i] = (phys_start + 4096 * i) | 5; // User, Read-only, present
-	
-	// Páginas de datos.
-	paginas = (unsigned int) p->va_bssend;
-	paginas = (paginas + 4095) & ~4095; // Redondeamos al próximo múltiplo de página (4KB).
-	paginas -= (unsigned int) p->va_data;
-	paginas >>= 12;
-	paginas += i;
-	for ( ; i < paginas; i++ )
-		mapa_programa[i] = (phys_start + 4096 * i) | 7; // User, Read-Write, present
+	const char *str = (const char *) r->ecx;
+	if ( r->ebx != 1 ) return -1;
 
-	// 1. Obtenemos cr3
-	// 2. Establecemos la dirección física de la entrada adecuada.
-	// 3. Invalidamos la página
-	// 4. Ponemos en cero la sección bss.
-	// 5. Saltamos a la función adecuada
-	__asm__ __volatile__ ( "movl %%cr3, %0" : "=r"(cr3) );
-	unsigned int *entrada = cr3 + (((unsigned int) p->va_text) >> 22);
-	entrada_vieja = *entrada;
-	*entrada = (((unsigned long) mapa_programa) - 0x80000000) | 3; // System, Read-Write, Present (puntero a tabla de páginas)
-
-	// Podemos o invalidar la página o recargar todo cr3 :P
-	//__asm__ __volatile__ ( "invlpg %0" : : "m"(*((unsigned int*)p->va_text)) );
-	__asm__ __volatile__ ( "movl %0, %%cr3" : : "r"(cr3) );
-
-	// Ponemos en cero bss (ahora que podemos acceder vía las direcciones virtuales :-)
-	unsigned char *bss = p->va_bss;
-	while ( bss != p->va_bssend )
-		*bss++ = 0;
-
-	__asm__ __volatile__ (
-		"pushl %1\n\t"
-		"call *%2\n\t"
-		"addl $4, %%esp\n\t"
-		"movl %%eax, %0"
-		: "=rm"(ret_status) : "rm"(cmdline), "r"(p->va_entry)
-	);
-
-	// Volvamos a como estábamos
-	*entrada = entrada_vieja;
-	__asm__ __volatile__ ( "movl %0, %%cr3" : : "r"(cr3) );
-
-	kprint ( "El programa devolvio el codigo de salida: %d\n", ret_status );
+	/* if ( chequear_direccion(r->ecx, r->edx) == MALA ) return -1; */
+	for ( i = 0; i < r->edx; i++ )
+		kputc( str[i] );
+	return r->edx;
 }
 
 /* Nota, hay que mandarle el EOI al PIC porque scheduler() NO vuelve,
@@ -127,6 +74,8 @@ int timer( struct registers *r ) {
 	return 0;
 }
 
+int teclado( struct registers *r ) { return 0; }
+
 int pf( struct registers *r ) {
 	cli();
 	kprint( r->errcode & 1 ? "Page level protection\n" : "Page not present\n" );	
@@ -158,20 +107,6 @@ void kmain(multiboot_info_t* mbd, unsigned int magic ){
     kinit( mbd );
 
 #if 0
-    // Ejecutemos módulo por módulo.
-    if ( mbd->flags & 8 ) {
-        module_t *mod;
-        unsigned long i;
-
-        for ( i = 0, mod = (module_t *) mbd->mods_addr;
-		        i < mbd->mods_count;
-		        i++, mod++ ) {
-	        ejecutar( mod->mod_start, mod->mod_end, (char *) mod->string );
-        }
-    }  
-    
-#endif
-#if 0
     kprint("llego\n");
     key_init();
     key_register(menu, 1);
@@ -197,21 +132,21 @@ void kmain(multiboot_info_t* mbd, unsigned int magic ){
 	//Iniciamos Scheduler
 	iniciar_scheduler();
 
-#if 0
 	/* Ejecutamos TODOS los módulos */
 	if ( mbd->flags & 8 ) {
-        module_t *mod;
-        unsigned long i;
-		for ( i = 0, mod = (module_t *) mbd->mods_addr;
+		module_t *mod;
+		unsigned long i;
+		for ( i = 0, mod = (module_t *) PA2KVA(mbd->mods_addr);
 			i < mbd->mods_count;
 			i++, mod++ )
 			{
 				programs_t *p = (programs_t *) mod->mod_start;
-				if ( (uint32_t)p->magic != 0x00455845 ) continue;
+				if ( *((uint32_t *)p->magic) != 0x00455845 ) continue;
 				crear_tarea( (programs_t *) mod->mod_start, i );
 			}
 	}
-#else
+
+#if 0
 	programs_t p1, p2;
 
 	p1.va_entry = pruebatarea;
@@ -222,7 +157,7 @@ void kmain(multiboot_info_t* mbd, unsigned int magic ){
 #endif
 
 	set_irq_handler( 0, &timer );
-	//set_irq_handler( 1, &teclado );
+	set_irq_handler( 1, &teclado );
 	
 	sti();
 

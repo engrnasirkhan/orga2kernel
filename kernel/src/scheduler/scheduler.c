@@ -54,8 +54,6 @@ void scheduler(){
 	//uint16_t selector_prox = (gdt_indice << 3) | 3;
 	uint16_t selector_prox = (gdt_indice << 3) | 0; // TODO: Usar el de arriba.
 
-	kprint( "Saltando a tarea: %d, %d, %x\n", tarea_activa, gdt_indice, selector_prox );
-	kprint( "CR3: %x\n", ((tss_t *) tareas[tarea_activa].va_tss)->cr3 );
 	__asm__ __volatile__ ("xchg %bx,%bx" );
 	__asm__ __volatile__ (
 		"pushl %0\n\t"
@@ -196,7 +194,7 @@ void crear_kthread( programs_t *programa, char id ) {
 void crear_tarea( programs_t *programa, char id ) {
 	reg_t flags;
 	uint32_t pdt_va, pdt_pa;
-	uint32_t tss_va, tss_pa;
+	uint32_t tss_va;
 	uint32_t paginas, i;
 	uint32_t va, pa;
 	pde_t *pdt;
@@ -206,6 +204,7 @@ void crear_tarea( programs_t *programa, char id ) {
 
 	/* ¿Es una tarea del kernel o del usuario? */
 	if ( (uint32_t) programa->va_entry >= KERNEL_MEMMAP )
+		return crear_kthread( programa, id );
 
 	if ( mmu_install_task_pdt( &pdt_va, &pdt_pa ) != E_MMU_SUCCESS ) {
 		kprint( "No se pudo obtener memoria para el nuevo PDT.\n" );
@@ -213,24 +212,27 @@ void crear_tarea( programs_t *programa, char id ) {
 	}
 	pdt = (pde_t *) pdt_va;
 
-	/* TODO: Necesitamos una función que obtenga una frame y lo marque como
-	 * usado, pero que NO lo mapee en el espacio de usuario.
-	 * TODO: No gastar una página entera para la TSS... usar kmalloc + alineación.
-	 */
-	if ( mmu_alloc( pdt, &tss_va, &tss_pa, PAGE_PRESENT | PAGE_RW | PAGE_SUPERVISOR )
-		!= E_MMU_SUCCESS ) {
+	/* TODO: No gastar una página entera para la TSS... usar kmalloc + alineación. */
+	if ( mmu_kalloc( &tss_va ) != E_MMU_SUCCESS ) {
 		kprint( "Error al obtener una página para la TSS.\n" );
 		return;
 	}
 
-	nueva_tss = (struct tss *) PA2KVA(tss_pa);
+	nueva_tss = (struct tss *) tss_va;
 
 	/* El código no necesitamos copiarlo, pues es RO */
 	va = (uint32_t) programa->va_text;
 	pa = (uint32_t) KVA2PA(programa);
 	paginas = (programa->va_data - programa->va_text) >> 12;
 	if ( !paginas ) {
-		kprint( "Información de programa errónea.\n" );
+		kprint( "Información de programa errónea.\n"
+			"TEXT: 0x%x\n"
+			"DATA: 0x%x\n"
+			"BSS: 0x%x\n"
+			"ENTRY: 0x%x\n",
+			programa->va_text, programa->va_data,
+			programa->va_bss, programa->va_entry
+		);
 		return;
 	}
 	for ( i = 0; i < paginas; i++ ) {
@@ -295,13 +297,13 @@ void crear_tarea( programs_t *programa, char id ) {
 	if ( tareas[id].hay_tarea ) matar_tarea( id );
 
 	tareas[id].hay_tarea = 1;
-	tareas[id].va_tss = (void *) PA2KVA(tss_pa);
-	tareas[id].pa_tss = (void *) tss_pa;
+	tareas[id].va_tss = (void *) tss_va;
+	tareas[id].pa_tss = (void *) KVA2PA(tss_va);
 	tareas[id].quantum_fijo = quantum_default;
 	tareas[id].quantum_actual = 0;
 
 	/* Ya mapeamos todo, ahora construimos la TSS :-) */
-	gdt_fill_tss_segment( g_GDT + id + offset_gdt_tareas, (void *) PA2KVA(tss_pa), 0x67, 0 );
+	gdt_fill_tss_segment( g_GDT + id + offset_gdt_tareas, (void *) tss_va, 0x67, 0 );
 
 	unmask_ints(flags);
 }

@@ -58,6 +58,7 @@ void kinit ( multiboot_info_t* mbd ) {
 	lidt( (void *) ( KVA2PA((unsigned long)&g_IDTr))); // Dirección física
 	init_isrs();
 	init_irqs();
+	init_syscalls();
 	pic8259A_init();
 
 	// Inicializamos el cmdline

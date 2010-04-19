@@ -7,9 +7,10 @@ SECTIONS {
    . = virtual_start;
 
    .text : AT(ADDR(.text) - 0x80000000) {
-       *(.text)
-       *(.rodata*)
-   }
+		.obj/src/boot/boot.o(.text)
+		*(.text)
+		*(.rodata*)
+	}
 
    .data ALIGN (0x1000) : AT(ADDR(.data) - 0x80000000) {
        *(.data)

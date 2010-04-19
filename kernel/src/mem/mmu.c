@@ -61,6 +61,7 @@ static uint32_t mmu_page_frame_2_PA(page_frame_t* page_frame);
  * @see mmu_page_frame_2_PA
  */
 static page_frame_t* mmu_PA_2_page_frame(uint32_t physical_address);
+static page_frame_t* get_PA_page_frame(uint32_t physical_address);
 
 /**
  * Dada una direccion fisica, devuelve el frame asociado a esta, pero lo quita de la lista de libres (si es que lo estaba)  
@@ -146,17 +147,17 @@ static void mmu_save_modules( multiboot_info_t *mbd ) {
 	memory_map_t *mmap;
 	module_t *mod;
 	uint32_t i;
-	uint32_t last_address;
+	uint32_t last_address, last_address_backup;
 	uint32_t paginas;
 
-	if ( !mbd->flags & 8 ) return;
+	if ( !(mbd->flags & 0x28) ) return;
 
 	/* Obtengo la última dirección utilizable, que por ahora
 	 * supongo que alcanza para copiar los módulos :-P
 	 */
 	for ( mmap = (memory_map_t *) PA2KVA(mbd->mmap_addr);
 		(uint32_t) mmap < PA2KVA(mbd->mmap_addr + mbd->mmap_length);
-		mmap = (memory_map_t *) (mmap + mmap->size + sizeof(mmap->size)))
+		mmap = (memory_map_t *) ((uint32_t)mmap + mmap->size + sizeof(mmap->size)))
 	{
 		if ( mmap->type != 1 ) continue;
 		last_address = mmap->base_addr_low + mmap->length_low;
@@ -165,18 +166,30 @@ static void mmu_save_modules( multiboot_info_t *mbd ) {
 	/* La dejamos en un múltiplo de página. */
 	last_address &= 0xFFFFF000;
 	last_address = PA2KVA(last_address);
+	last_address_backup = last_address;
 
 	/* Copiamos los módulos. */
-	for ( i = 0, mod = (module_t *) mbd->mods_addr;
+	kprint( "Copiando módulos: %d\n", mbd->mods_count );
+	for ( i = 0, mod = (module_t *) PA2KVA(mbd->mods_addr);
 		i < mbd->mods_count;
 		i++, mod++ ) {
 		paginas = (mod->mod_end - mod->mod_start) >> 12;
 		if (paginas == 0) paginas++;
 		last_address -= PAGE_SIZE * paginas;
 
+		kprint( "memcpy(0x%x,0x%x,%d)\n", last_address, PA2KVA(mod->mod_start), mod->mod_end - mod->mod_start );
+
 		memcpy( (void *)last_address, (void *) PA2KVA(mod->mod_start), mod->mod_end - mod->mod_start );	
 		mod->mod_start = last_address;
 		mod->mod_end = last_address + paginas * PAGE_SIZE;
+	}
+
+	/* Marcamos las páginas como utilizadas */
+	kprint( "Marcando desde 0x%x hasta 0x%x\n", last_address, last_address_backup );
+	for ( i = last_address; i < last_address_backup; i += PAGE_SIZE ) {
+		page_frame_t *pf = get_PA_page_frame( KVA2PA(i) );
+		kprint( "Marcando 0x%x\n", KVA2PA(i) );
+		pf->ref_count = 1;
 	}
 }
 
@@ -354,7 +367,7 @@ static uint32_t mmu_page_frame_2_PA(page_frame_t* page_frame)
     return (((uint32_t)page_frame - (uint32_t)mem_page_frames) / sizeof(page_frame_t)) * PAGE_SIZE;
 }
 
-page_frame_t* get_PA_page_frame(uint32_t physical_address)
+static page_frame_t* get_PA_page_frame(uint32_t physical_address)
 {
     uint32_t k = physical_address / PAGE_SIZE;
     if( k < page_frames_count)

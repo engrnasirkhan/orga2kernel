@@ -3,6 +3,7 @@
 #include <asm/idt.h>
 #include <asm/irqs.h>
 #include <asm/isrs.h>
+#include <asm/syscalls.h>
 #include <kernel/globals.h>
 #include <kernel/panic.h>
 #include <drivers/pic8259A.h>
@@ -70,6 +71,10 @@ void init_irqs() {
 		g_IRQS[i] = (handler_t) 0;
 }
 
+void init_syscalls() {
+	idt_set_trap( g_IDT + 0x80, 8, (uint32_t) syscall_entry, 3 );
+}
+
 
 void isr_dispatch_routine( struct registers regs ) {
 	static const char *isr_name[32] = {
@@ -134,4 +139,13 @@ void clear_isr_handler( int isr ) {
 	if ( isr < 0 || isr > 15 )
 		panic( "Tratando de quitar un ISR inexistente: %d", isr );
 	g_ISRS[isr] = 0;
+}
+
+void syscall_table_entry( struct registers regs ) {
+	if ( regs.eax > NR_SYSCALLS  || !syscall_table[regs.eax] ) {
+		debug( "Syscall %d desconocida.\n", regs.eax );
+		return;
+	}
+
+	regs.eax = (*syscall_table[regs.eax])(&regs);
 }
