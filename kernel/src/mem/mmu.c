@@ -72,6 +72,7 @@ static page_frame_t* get_PA_page_frame(uint32_t physical_address);
  * @see  
  */
 static page_frame_t* mmu_get_page_frame(uint32_t physical_address);
+static page_frame_t* get_page_frame( uint32_t pa );
 
 /**
  * Decrementa las referencias del frame pasado como parametro. Si llegan a ser nulas, se agrega a la pila de libres.
@@ -143,7 +144,7 @@ static uint32_t free_page_frame_count = 0;
 //la Page Directory Table del kernel
 static pde_t kernel_pdt[1024]  __attribute__ ((aligned (4096)));
 
-static void mmu_save_modules( multiboot_info_t *mbd ) {
+static void mmu_save_modules( multiboot_info_t *mbd, uint32_t *fa, uint32_t *la ) {
 	memory_map_t *mmap;
 	module_t *mod;
 	uint32_t i;
@@ -184,18 +185,14 @@ static void mmu_save_modules( multiboot_info_t *mbd ) {
 		mod->mod_end = last_address + paginas * PAGE_SIZE;
 	}
 
-	/* Marcamos las páginas como utilizadas */
-	kprint( "Marcando desde 0x%x hasta 0x%x\n", last_address, last_address_backup );
-	for ( i = last_address; i < last_address_backup; i += PAGE_SIZE ) {
-		page_frame_t *pf = get_PA_page_frame( KVA2PA(i) );
-		kprint( "Marcando 0x%x\n", KVA2PA(i) );
-		pf->ref_count = 1;
-	}
+	*fa = last_address;
+	*la = last_address_backup;
 }
 
 //Inicializa las estructuras relacionadas con la admin de memoria
 void mmu_init(multiboot_info_t* mbd)
 {  
+	uint32_t fa, la, i;
     if(mbd->flags & 0x0001)
     { 
         available_physical_memory = mbd->mem_lower + mbd->mem_upper;
@@ -207,7 +204,7 @@ void mmu_init(multiboot_info_t* mbd)
     //inicializamos la cantidad de paginas de LARGE_PAGE_SIZE que ocupa el kernel
     uint32_t kernel_pages_count = 0;
 
-	 mmu_save_modules( mbd );
+	 mmu_save_modules( mbd, &fa, &la );
     
     //Si tenemos disponible el mapa de memoria del GRUB, usarlo!
     if(mbd->flags & 0x0020)
@@ -278,6 +275,13 @@ void mmu_init(multiboot_info_t* mbd)
     mmu_init_paging(kernel_pdt);  
     //Finalmente, ahora podemos poner la gdt definitiva
     mmu_install_gdt();
+
+	/* Marcamos las páginas como utilizadas */
+	kprint( "Marcando desde 0x%x hasta 0x%x\n", fa, la );
+	for ( i = fa; i < la; i += PAGE_SIZE ) {
+		get_PA_page_frame( KVA2PA(i) );
+		kprint( "Marcando 0x%x\n", KVA2PA(i) );
+	}
 }
 
 static void mmu_init_paging(uint32_t *kpdt)

@@ -197,6 +197,7 @@ void crear_tarea( programs_t *programa, char id ) {
 	uint32_t tss_va;
 	uint32_t paginas, i;
 	uint32_t va, pa;
+	uint32_t oldcr3;
 	pde_t *pdt;
 	struct tss *nueva_tss;
 
@@ -247,32 +248,25 @@ void crear_tarea( programs_t *programa, char id ) {
 
 	/* Hasta acá ya tenemos mapeado el código, hay que hacer lo mismo con los datos.
 	 * Hay que tener en cuenta que los datos sí hay que copiarlos.
+	 * La sección .BSS y los datos pueden compartir la misma página, hay que tener
+	 * cuidado con eso.
 	 */
-	paginas = programa->va_bss - programa->va_data;
+	paginas = ((programa->va_bssend - programa->va_data) + (PAGE_SIZE-1)) >> 12;
 	for ( i = 0; i < paginas; i++ ) {
 		if ( mmu_alloc_at_VA( pdt, va, PAGE_PRESENT | PAGE_RW | PAGE_USER, 0 ) !=
 			E_MMU_SUCCESS ) {
 			kprint( "Error al obtener una página en la dirección virtual 0x%x\n", va );
 			return;
 		}
-
-		/* Copiamos los datos. */
-		memcpy( (void *)va, (void *)pa, PAGE_SIZE );
-		pa += PAGE_SIZE;
 		va += PAGE_SIZE;
 	}
 
-	/* Ahora hay que mapear la sección BSS, y llenarla de ceros. */
-	paginas = programa->va_bssend - programa->va_bss;
-	for ( i = 0; i < paginas; i++ ) {
-		if ( mmu_alloc_at_VA( pdt, va, PAGE_PRESENT | PAGE_RW | PAGE_USER, 0 ) !=
-			E_MMU_SUCCESS ) {
-			kprint( "Error al obtener una página en la dirección virtual 0x%x\n", va );
-			return;
-		}
-		memset( (void *)va, 0, PAGE_SIZE );
-		va += PAGE_SIZE;
-	}
+	/* Ahora que mapeamos las páginas de datos y de BSS hay que rellenarlas */
+	oldcr3 = getCR3();
+	setCR3( pdt_pa );
+	memcpy( (void *) programa->va_data, (void *) PA2KVA(pa), programa->va_bss - programa->va_data );
+	memset( (void *) programa->va_bss, 0, programa->va_bssend - programa->va_bss );
+	setCR3( oldcr3 );
 
 	/* Ahora pedimos un espacio cualquier para la pila. */
 	if ( mmu_alloc( pdt, &va, &pa, PAGE_PRESENT | PAGE_RW | PAGE_USER ) != E_MMU_SUCCESS ) {

@@ -21,7 +21,7 @@
  * @li En la pila de usuario.
  */
 
-extern void *syscall_entry;
+extern void syscall_entry();
 extern handler_t syscall_table[];
 
 extern int sys_write( struct registers * );

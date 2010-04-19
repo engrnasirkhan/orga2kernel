@@ -91,6 +91,21 @@ int pf( struct registers *r ) {
 
 void pruebatarea()  { for (;;) kprint("HOLA"); }
 void pruebatarea2() { for (;;) kprint("chau"); }
+void pruebatarea3() {
+	const char *str = "TaReA 3";
+	int size = 8;
+	for (;;) {
+		__asm__ __volatile__ (
+			"movl $1, %%eax\n\t"
+			"movl $1, %%ebx\n\t"
+			"movl %0, %%ecx\n\t"
+			"movl %1, %%edx\n\t"
+			"int $0x80"
+			: : "rm"(str), "rm"(size)
+			: "eax", "ebx", "ecx", "edx"
+		);
+	}
+}
 
 
 void kmain(multiboot_info_t*, unsigned int magic ) __noreturn;
@@ -132,6 +147,7 @@ void kmain(multiboot_info_t* mbd, unsigned int magic ){
 	//Iniciamos Scheduler
 	iniciar_scheduler();
 
+#if 0
 	/* Ejecutamos TODOS los módulos */
 	if ( mbd->flags & 8 ) {
 		module_t *mod;
@@ -145,15 +161,16 @@ void kmain(multiboot_info_t* mbd, unsigned int magic ){
 				crear_tarea( (programs_t *) mod->mod_start, i );
 			}
 	}
-
-#if 0
-	programs_t p1, p2;
+#else
+	programs_t p1, p2, p3;
 
 	p1.va_entry = pruebatarea;
 	p2.va_entry = pruebatarea2;
+	p3.va_entry = pruebatarea3;
 
 	crear_kthread( &p1, 0 );
 	crear_kthread( &p2, 1 );
+	crear_kthread( &p3, 2 );
 #endif
 
 	set_irq_handler( 0, &timer );

@@ -3,6 +3,7 @@
 #include <asm/gdt.h>
 #include <asm/idt.h>
 #include <asm/handlers.h>
+#include <asm/syscalls.h>
 #include <kernel/cmdline.h>
 #include <kernel/globals.h>
 #include <screen/screen.h>
