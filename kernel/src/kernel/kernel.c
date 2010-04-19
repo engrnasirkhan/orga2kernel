@@ -158,7 +158,8 @@ void kmain(multiboot_info_t* mbd, unsigned int magic ){
 		        i++, mod++ ) {
 	        ejecutar( mod->mod_start, mod->mod_end, (char *) mod->string );
         }
-    }
+    }  
+    
     kprint("llego\n");
     key_init();
     key_register(menu, 1);

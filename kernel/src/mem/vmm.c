@@ -3,7 +3,7 @@
 #include <mem/vmm.h>
 
 /**
- * Intenta agrandar el heap del kernel reservando mas espacio usand sbrk.
+ * Intenta agrandar el heap del kernel reservando mas espacio usand vmm_resize_heap.
  * 
  * @param size Tamaño a agrandar
  * @return header_t* Devuelve un puntero al bloque de memoria conseguido, o NULL si no pudo agrandar el heap.
@@ -11,14 +11,23 @@
  */
 static header_t* vmm_morecore(uint32_t size);
 
+/**
+ * Agranda el heap en nbytes bytes.
+ *
+ * @param nbytes Cantidad de bytes para agrandar el heap
+ * @return uint8_t* Puntero al bloque de nbytes bytes.
+ * @see vmm_morecore
+ */
+static uint8_t* vmm_resize_heap(uint32_t nbytes);
+
 //Inicio de la lista de memoria libre
-static header_t *base = (header_t*)KERNEL_HEAP_START; 
+static header_t base;
 
 //Lista de bloques libres
 static header_t *freep = NULL;
 
 //Apunta al final del heap del kernel (inicia en 4k mas adelante porque incializamos el heap en 4k)
-static uint8_t* kernel_heap_end = (uint8_t*)(KERNEL_HEAP_START + PAGE_SIZE);
+static uint8_t* kernel_heap_end = (uint8_t*)(KERNEL_HEAP_START);
 
 ptr_t kmalloc(uint32_t nbytes)
 {
@@ -26,13 +35,12 @@ ptr_t kmalloc(uint32_t nbytes)
     uint32_t nunits;
     
     nunits = (nbytes + sizeof(header_t) -1)/sizeof(header_t) + 1;
-    //nunits = nbytes + sizeof(header_t) - nbytes%sizeof(header_t);
 
     if((prevp = freep) == NULL)
     {
         //No hay una lista construida todavia
-        base->s.ptr = freep = prevp = base;
-        base->s.size = 0;
+        base.s.ptr = freep = prevp = &base;
+        base.s.size = 0;
     }
     for(p = prevp->s.ptr; ; prevp = p, p = p->s.ptr)
     {
@@ -99,71 +107,44 @@ void kfree(ptr_t ap)
     freep = p;
 }
 
-header_t* vmm_morecore(uint32_t size)
-{
+header_t* vmm_morecore(uint32_t nunits)
+{   
     uint8_t *cp;
     header_t *up;
-    
-    //como minimo agrandamos el heap en el tamaño NALLOC
-    if(size < NALLOC)
-    {
-        size = NALLOC; 
-    }
-    
-    //Veamos si el espacio que quieren entra entre kernel_heap_end y el comienzo de una nueva pagina
-    //r es lo que le falta a kernel_heap_end para llegar a una direccion alineada a PAGESIZE
-    uint32_t r = (-((uint32_t)kernel_heap_end))%PAGE_SIZE; 
 
-    if(r < size)
-    {
-        //si piden algo mas grande que el espacio entre kernel_heap_end y la proxima pagina, entonces pedimos mas paginas !
-        uint32_t frames_needed = size/PAGE_SIZE;
-        if(r)
-        {
-            frames_needed++;
-        }
-        if(mmu_get_free_frame_count() < frames_needed){
-            //La cantidad de lugar no alcanza, asi que por ahora no hacemos otra cosa mas que devolver NULL
-            //Se podria intentar hacer lugar swapeando paginas, pero por ahora no sabemos hacer eso
-            return NULL;
-        }
-        else
-        {
-            uint32_t va = (uint32_t)kernel_heap_end + r;
-            uint32_t i;
-            while(frames_needed)
-            {
-                mmu_alloc_at_VA((pde_t*)PA2KVA(getCR3()), va, PAGE_SUPERVISOR|PAGE_RW, 1);
-                frames_needed--;
-                va += PAGE_SIZE;
-            }
-        }
+    if(nunits < NALLOC)
+    {  
+        //Cantidad de unidades minima para agrandar el heap
+        nunits = NALLOC;
     }
-    uint8_t *old_kernel_heap_end = kernel_heap_end;
-    //Alagargamos el heap
-    kernel_heap_end += size;
-    cp = old_kernel_heap_end;
+    
+    cp = vmm_resize_heap(nunits * sizeof(header_t));
+    if(cp == NULL)
+    {
+        return NULL;
+    }  
     
     up = (header_t*) cp;
-    up->s.size = size;
-
+    up->s.size = nunits;
     kfree((ptr_t)(up+1));
     
     return freep;
 }
 
-/*
-uint8_t* sbrk(uint32_t size)
+
+static uint8_t* vmm_resize_heap(uint32_t nbytes)
 {
-    //veamos si el espacio que quieren entra entre kernel_heap_end y el comienzo de una nueva pagina
-    //r es lo que le falta a kernel_heap_end para llegar a una direccion alineada a PAGESIZE
+    //Veamos si los nbytes entran entre el kernel_heap_end y el final de la pagina
+    //r es lo que le falta a kernel_heap_end para llegar a una direccion alineada a PAGE_SIZE
     uint32_t r = (-((uint32_t)kernel_heap_end))%PAGE_SIZE; 
 
-    if(r < size)
+    if(r < nbytes)
     {
-        //si piden algo mas grande que el espacio entre kernel_heap_end y la proxima pagina, entonces pedimos mas paginas !
-        uint32_t frames_needed = size/PAGE_SIZE;
-        if(r)
+        //Si piden algo mas grande que el espacio entre kernel_heap_end y la proxima pagina, entonces pedimos mas paginas !
+        //La cantidad de bytes que hay que reservar es
+        uint32_t bytes_needed = nbytes - r;
+        uint32_t frames_needed = bytes_needed/PAGE_SIZE;
+        if(bytes_needed%PAGE_SIZE)
         {
             frames_needed++;
         }
@@ -175,7 +156,6 @@ uint8_t* sbrk(uint32_t size)
         else
         {
             uint32_t va = (uint32_t)kernel_heap_end + r;
-            uint32_t i;
             while(frames_needed)
             {
                 mmu_alloc_at_VA((pde_t*)PA2KVA(getCR3()), va, PAGE_SUPERVISOR|PAGE_RW, 1);
@@ -186,8 +166,8 @@ uint8_t* sbrk(uint32_t size)
     }
     uint8_t *old_kernel_heap_end = kernel_heap_end;
     //Alagargamos el heap
-    kernel_heap_end += size;
+    kernel_heap_end = (uint8_t*) (nbytes + (uint32_t)kernel_heap_end);
     
     return old_kernel_heap_end;
 }
-*/
+

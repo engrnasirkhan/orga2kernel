@@ -3,7 +3,6 @@
 
 #include <asm/types.h>
 
-//Cantidad minima de espacio para llamar a morecore, si se pide menos, se pide NALLOC en su lugar
 #define NALLOC  1024
 
 typedef long align_t;

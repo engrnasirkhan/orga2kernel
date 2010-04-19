@@ -12,14 +12,14 @@ struct key_handler_node * key_is_registered(key tecla);
 
 //en el futuro se pueden mas de 1 tecla(shift+...).
 int key_register(key_handler_t funcion, key clave){
-    struct key_handler_node * node = key_is_registered(clave);
+    key_handler_node_t *node = key_is_registered(clave);
     if(node != NULL){
         kprint("2do o mas\n");
         node->handler = funcion;
     } else {
-        int tamanio = sizeof(struct key_handler_node);
+        int tamanio = sizeof(key_handler_node_t);
         kprint("primero %d\n", tamanio);
-        struct key_handler_node* nuevo = kmalloc(tamanio);
+        key_handler_node_t *nuevo = (key_handler_node_t*)kmalloc(tamanio);
         if(nuevo == NULL){
             kprint("OUT OF MEMORY");
             return 1;

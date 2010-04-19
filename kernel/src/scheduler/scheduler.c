@@ -21,7 +21,6 @@ void pruebaFuncion(){
  //while(1) kprint(" Funciona ");	
 }
 
-
 //Funcion que muestra menu
 void menu(key s){
 	return; 
@@ -59,6 +58,7 @@ void scheduler(){
 
 	kprint( "Saltando a tarea: %d, %d, %x\n", tarea_activa, gdt_indice, selector_prox );
 	kprint( "CR3: %x\n", ((tss_t *) tareas[tarea_activa].va_tss)->cr3 );
+
 	__asm__ __volatile__ (
 		"pushl %0\n\t"
 		"pushl $0\n\t"
@@ -160,7 +160,7 @@ void crear_tarea(programs_t programa, char numero_tarea){
 //Pido pagina para nueva tss (esto lo hago desde la pdt del kernel)
 	uint32_t fisica_tss;
     uint32_t virtual_tss;
-    uint8_t perm = 2; 
+    uint8_t perm = PAGE_PRESENT | PAGE_RW | PAGE_SUPERVISOR; 
 	if ((mmu_alloc( (pde_t *) PA2KVA(getCR3()) , &virtual_tss, &fisica_tss, perm)) == E_MMU_NO_MEMORY) kprint("Error al crear TSS nueva tarea");
 	tareas[numero_tarea].va_tss = (void *) virtual_tss;
 	tareas[numero_tarea].pa_tss = (void *) fisica_tss;

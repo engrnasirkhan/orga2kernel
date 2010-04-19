@@ -11,6 +11,7 @@ struct key_handler_node {
         void* next;
 };
 
+typedef struct key_handler_node key_handler_node_t;
 
 int irq_keyboard( struct registers * );
 int key_register(key_handler_t , key );

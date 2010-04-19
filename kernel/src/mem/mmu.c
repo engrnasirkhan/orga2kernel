@@ -2,6 +2,7 @@
 #include <asm/asm.h>
 #include <asm/gdt.h>
 #include <mem/mmu.h>
+#include <mem/vmm.h>
 #include <kernel/globals.h>
 #include <kernel/panic.h>
 #include <lib/string.h>
@@ -15,18 +16,6 @@
  * @see mmu_install_gdt
  */
 static void mmu_init_paging(uint32_t *kpdt);
-
-/**
- * Construye el heap del kernel en la direccion virtual pasada como parametro.
- * Se debe construir el heap antes de utilizar las funciones de la vmm del kernel.
- * 
- * @param heap_start Direccion virtual al inicio del heap.
- * @return Devuelve E_MMU_SUCCESS si pudo completar la operacion con exito. E_MMU_NO_MEMORY si no pudo instalar el heap.
- * @see kmalloc
- * @see kfree
- * @see mmu_init
- */
-static uint8_t mmu_install_kernel_heap();
 
 /**
  * Instala la GDT definitiva, quitando la dummy gdt utilizada durante el proceso de booteo.
@@ -236,11 +225,6 @@ void mmu_init(multiboot_info_t* mbd)
     mmu_init_paging(kernel_pdt);  
     //Finalmente, ahora podemos poner la gdt definitiva
     mmu_install_gdt();
-    //Incializamos el espacio para el heap del kernel
-    if(mmu_install_kernel_heap() != E_MMU_SUCCESS)
-    {
-        panic("No se pudo armar el heap del kernel!");       
-    }
 }
 
 static void mmu_init_paging(uint32_t *kpdt)
@@ -286,11 +270,6 @@ static void mmu_init_paging(uint32_t *kpdt)
     //Leemos cr0
     setCR0(getCR0() | 0x80000000); 
     //Listo! Paginacion activada  
-}
-
-static uint8_t mmu_install_kernel_heap()
-{
-    return mmu_alloc_at_VA( kernel_pdt, KERNEL_HEAP_START, PAGE_RW | PAGE_SUPERVISOR, 1 ); //force allocation
 }
 
 static void mmu_push_free_frame(page_frame_t *page_frame)
