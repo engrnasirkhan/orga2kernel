@@ -43,7 +43,7 @@ static page_frame_t* mmu_pop_free_frame();
 
 /**
  * Devuelve la direccion fisica del frame pasado como parametro. Para ello se fija en el 
- * puntero al frame, y lo compara con el puntero al principio de la lista para conocer su posicion
+ * puntero al frame, y lo compara con el punter o al principio de la lista para conocer su posicion
  * y luego multiplicar convenientemente para conocer la direccion fisica del mismo
  *
  * @param page_frame Puntero al page_frame cuya physical address se quiere conocer
@@ -105,16 +105,18 @@ static uint8_t mmu_alloc_page(pde_t *pdt, page_frame_t *page_frame, uint32_t va,
  * @return uint8_t Devuelve E_MMU_SUCCESS si todo salio correctamente. E_MMU_PTABLE_NOT_PRESENT si la tabla de paginas para la va no existe y create_page_table==0.
  *                 E_MMU_NO_MEMORY si no hubo memoria suficiente para realizar la operacion.                     
  */
-static uint8_t mmu_dirwalk(pde_t *pdt, uint32_t va, pte_t **pte, uint8_t create_page_table);
+static uint8_t mmu_dirwalk(pde_t *pdt, uint32_t va, pte_t **pte, uint8_t create_page_table, uint8_t ptable_domain);
 
 /**
- * Construye una PDT basica para cualquier tarea, con el kernel mapeado a partir de 0x80000000
+ * Devuelve un puntero a la la pte asociada a la va pasada como parámetro.
  *
- * @params pdt Puntero a la nueva pdt
+ * @params pdt Puntero a la pdt sobre la cual buscar la pte
+ * @params va Virtual Addess cuya pte asociada dentro de ptd se quiere buscar
+ * @return pte_t* Devuelve un puntero a la pte asociada o NULL si no existe la page table
  * @see mmu_install_task_pdt
  * @see mmu_uninstall_task_pdt
  */
-//static void mmu_build_pdt(pdt_t *ptd);
+static pte_t* mmu_get_pte(pde_t *ptd, uint32_t va);
 
 //Puntero al final del codigo del kernel (provisto por el linker)
 extern uint8_t __kernel_end[];
@@ -129,9 +131,6 @@ static page_frame_t* mem_page_frames = NULL;
 
 //stack de frames libres
 static page_frame_t* free_page_frame_stack = NULL;
-
-//puntero al final de free_frames para poder usarla como una cola (no se porque entonces no la llame 'cola' xD)
-//static page_frame_t* free_pageframes_end;
 
 //Cantidad de frames en la memoria fisica disponible
 static uint32_t page_frames_count = 0;
@@ -202,7 +201,7 @@ void mmu_init(multiboot_info_t* mbd)
     //inicializamos la cantidad de paginas de LARGE_PAGE_SIZE que ocupa el kernel
     uint32_t kernel_pages_count = 0;
 
-	 mmu_save_modules( mbd, &fa, &la );
+	mmu_save_modules( mbd, &fa, &la );
     
     //Si tenemos disponible el mapa de memoria del GRUB, usarlo!
     if(mbd->flags & 0x0020)
@@ -251,12 +250,9 @@ void mmu_init(multiboot_info_t* mbd)
         //Ahora actualizamos los frames libres, porque free_page_frame_stack no fue considerado como parte del kernel
         kernel_physical_end += sizeof(page_frame_t)*page_frames_count;
 
-        //Calculamos la cantidad de frames fisicos que ocupa el kernel para marcarlos como usados
-        //kernel_frames_count  = kernel_physical_end / PAGE_SIZE;
         //Alineamos el kernel_physical_end a 4kb
         if(kernel_physical_end % PAGE_SIZE)
         {
-            //kernel_frames_count++;
             kernel_physical_end += (PAGE_SIZE - kernel_physical_end%PAGE_SIZE);
         }
     }
@@ -277,7 +273,7 @@ void mmu_init(multiboot_info_t* mbd)
 	/* Marcamos las páginas como utilizadas */
 	kprint( "Marcando desde 0x%x hasta 0x%x\n", fa, la );
 	for ( i = fa; i < la; i += PAGE_SIZE ) {
-		mmu_PA_2_page_frame( KVA2PA(i) );
+		mmu_get_page_frame( KVA2PA(i) );
 		kprint( "Marcando 0x%x\n", KVA2PA(i) );
 	}
 }
@@ -382,7 +378,7 @@ static page_frame_t* mmu_PA_2_page_frame(uint32_t physical_address)
     }
 }
 
-page_frame_t* mmu_get_page_frame( uint32_t pa )
+static page_frame_t* mmu_get_page_frame( uint32_t pa )
 {
     page_frame_t* frame = mmu_PA_2_page_frame( pa );
     if( frame )
@@ -417,31 +413,30 @@ page_frame_t* mmu_get_page_frame( uint32_t pa )
     return frame;
 }
 
-uint8_t mmu_alloc_page(pde_t *pdt, page_frame_t *page_frame, uint32_t va, uint8_t perm, uint8_t force_dealloc)
+static uint8_t mmu_alloc_page(pde_t *pdt, page_frame_t *page_frame, uint32_t va, uint8_t perm, uint8_t force_dealloc)
 {
     uint32_t pd_offset = GET_PD_OFFSET(va);
     uint32_t pt_offset = GET_PT_OFFSET(va);
     
     pte_t *pte = NULL;
-    
-    if(mmu_dirwalk(pdt, va, &pte, 1) == E_MMU_SUCCESS)
+    pte_t old_pte = *(mmu_get_pte(pdt, va));
+      
+    if(mmu_dirwalk(pdt, va, &pte, 1, IS_USER_PAGE(perm)) == E_MMU_SUCCESS)
     {
-        //El if que sigue es ensalada de fruta. Corregir para hacer un dealloc correcto.
-        /*
-        if(*pte != 0)
+        if(*pte == old_pte)
         {
             //Ya habia un frame asociado a "va"
             if( force_dealloc)
             {
-                page_frame_t *old_frame = PA2KVA(mmu_PA_2_page_frame(GET_BASE_ADDRESS(*pte)));
-                page_dealloc(old_frame);
+                page_frame_t *old_frame = (page_frame_t*)PA2KVA(mmu_PA_2_page_frame(GET_BASE_ADDRESS(*pte)));
+                mmu_free_page_frame(old_frame);
             }
             else
             {
                 return E_MMU_INVALID_VA;
             }
         }
-        */
+        
         //Incrementamos la cantidad de referencias
         page_frame->ref_count++;
         *pte = mmu_page_frame_2_PA(page_frame) | perm | PAGE_PRESENT;
@@ -455,7 +450,7 @@ uint8_t mmu_alloc_page(pde_t *pdt, page_frame_t *page_frame, uint32_t va, uint8_
     }
 }
 
-void page_dealloc(page_frame_t *frame)
+static void mmu_free_page_frame(page_frame_t *frame)
 {
     frame->ref_count--;
     if(frame->ref_count == 0)
@@ -464,7 +459,7 @@ void page_dealloc(page_frame_t *frame)
     }
 }
 
-uint8_t mmu_dirwalk(pde_t *pdt, uint32_t va, pte_t **pte, uint8_t create_page_table)
+static uint8_t mmu_dirwalk(pde_t *pdt, uint32_t va, pte_t **pte, uint8_t create_page_table, uint8_t ptable_domain)
 {
     uint32_t pd_offset = GET_PD_OFFSET(va);
     uint32_t pt_offset = GET_PT_OFFSET(va);
@@ -473,7 +468,51 @@ uint8_t mmu_dirwalk(pde_t *pdt, uint32_t va, pte_t **pte, uint8_t create_page_ta
 	  * accederlo, sólo si el pte tiene los permisos
 	  * adecuados.
 	  */
-	 pdt[pd_offset] |= PAGE_USER | PAGE_RW;
+	// pdt[pd_offset] |= PAGE_USER | PAGE_RW;
+    *pte = mmu_get_pte(pdt, va);
+    if(*pte != NULL)
+    {
+        return E_MMU_SUCCESS;
+    }
+    else
+    {
+        //La page table no existe !
+        if(create_page_table){
+            //Ok, intentamos crearla          
+            page_frame_t *new_frame = mmu_pop_free_frame();
+            if(new_frame != NULL)
+            {
+                //Incrementamos la cantidad de referencias
+                new_frame->ref_count++;
+                //Obtenemos la direccion fisica del nuevo page_frame
+                uint32_t new_frame_pa = mmu_page_frame_2_PA(new_frame);
+                //Obtenemos un puntero al frame para llenarlo
+                pte_t *new_ptable = (pte_t*)PA2KVA(new_frame_pa);
+                //Inicializamos en 0 la nueva tabla de paginas
+                memset(new_ptable, 0, PAGE_SIZE);
+                //Realizamos el mapeo correspondiente
+                if(ptable_domain != PAGE_USER && ptable_domain!=PAGE_SUPERVISOR)
+                {
+                    //por default es PAGE_SUPERVISOR
+                    ptable_domain = PAGE_SUPERVISOR;
+                }
+                pdt[pd_offset] = new_frame_pa | ptable_domain | PAGE_RW | PAGE_PRESENT;
+                //Llenamos pte
+                *pte = &(new_ptable[pt_offset]);
+                //Devolvemos SUCCESS !
+                return E_MMU_SUCCESS;   
+            }
+            else
+            {
+                return E_MMU_NO_MEMORY;
+            }
+        }
+        else
+        {
+            return E_MMU_PTABLE_NOT_PRESENT;
+        }
+    }
+    /*
     if(IS_PRESENT(pdt[pd_offset]))
     {
         //Buenisimo, la pagina estaba presente asi que devolvemos la pte
@@ -514,6 +553,22 @@ uint8_t mmu_dirwalk(pde_t *pdt, uint32_t va, pte_t **pte, uint8_t create_page_ta
             return E_MMU_PTABLE_NOT_PRESENT;
         }
     }
+    */
+}
+
+static pte_t* mmu_get_pte(pde_t *pdt, uint32_t va)
+{
+    uint32_t pd_offset = GET_PD_OFFSET(va);
+    uint32_t pt_offset = GET_PT_OFFSET(va);
+    if(IS_PRESENT(pdt[pd_offset]))
+    {
+        pte_t *page_table  = (pte_t*)PA2KVA(GET_BASE_ADDRESS(pdt[pd_offset]));
+        return &page_table[pt_offset];   
+    }
+    else
+    {
+        return NULL;
+    }
 }
 
 //Obtiene un page frame y lo mapea en va.
@@ -534,10 +589,10 @@ uint8_t mmu_free(pde_t *pdt, uint32_t va )
 {
     //Primero obtenemos la pte para obtener la direccion fisica del frame
     pte_t *pte;
-    if(mmu_dirwalk(pdt, va, &pte, 0) == E_MMU_SUCCESS)
+    if(mmu_dirwalk(pdt, va, &pte, 0, 0) == E_MMU_SUCCESS)
     {
         page_frame_t *frame = mmu_PA_2_page_frame((uint32_t)GET_BASE_ADDRESS(*pte));
-        page_dealloc(frame);
+        mmu_free_page_frame(frame);
         //Invalido la va en la TLB
         //OJO: invalida la va de la PDT que esta instalada en este momento, cr3!
         invlpg(va);
@@ -643,36 +698,11 @@ uint8_t mmu_install_task_pdt(uint32_t *va, uint32_t *pa)
         pde_t *pdt = (pde_t*) task_pdt_va;
         memset(pdt, 0, PAGE_SIZE);
         
-        //Vamos a mapear toda la memoria fisica disponible a partir de 0x80...0
-        //Cantidad de frames de tamaño 4mb
-        uint32_t large_frames_count = page_frames_count / 1024;
-        //Cantidad de frames de 4kb que sobran (siempre menor a 1024)
-        uint32_t small_frames_count = page_frames_count % 1024;
-        //Primero mapeamos todos los frames de 4mb
+        //Copiamos el mapeo del kernel para que la tarea pueda ver y usar el kernel
         uint32_t i;
-        for(i=0; i<large_frames_count; i++)
+        for(i=0; i<512; i++)
         {
-            pdt[i+512] = (i << 22) | PAGE_PRESENT | PAGE_SUPERVISOR | PAGE_RW | PAGE_4MB;
-        }
-        //Si quedan frames por mapear, lo hacemos en una page table adicional (una para kernel y otra para user)
-        page_frame_t *new_frame = mmu_pop_free_frame();
-        if(new_frame==NULL)
-        {
-            mmu_free(kernel_pdt, task_pdt_va);
-            return E_MMU_NO_MEMORY;
-        }
-        uint32_t pte_pa = mmu_page_frame_2_PA(new_frame);
-        pde_t *pte = (pde_t*)PA2KVA(pte_pa);
-                
-        //Mapeamos la nueva ptable
-        pdt[i+512] = pte_pa | PAGE_PRESENT | PAGE_SUPERVISOR | PAGE_RW;
-        
-        //Ahora mapeamos el resto
-        i = 0;
-        while(i < small_frames_count)
-        {
-            pte[i]   = (large_frames_count * LARGE_PAGE_SIZE + i*PAGE_SIZE) | PAGE_PRESENT | PAGE_SUPERVISOR | PAGE_RW;
-            i++;
+            pdt[i+512] = kernel_pdt[i+512];
         }
 
         *va = task_pdt_va;

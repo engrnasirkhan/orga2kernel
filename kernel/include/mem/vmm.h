@@ -40,4 +40,11 @@ ptr_t kmalloc(uint32_t block_size);
  */
 void kfree(ptr_t ptr);
 
+/**
+ * Devuelve la direccion virtual del final del heap del kernel
+ *
+ * @return Devuelve la direccion donde termina el heap
+ */
+uint32_t vmm_get_kernel_heap_end();
+
 #endif //__VMM__H__

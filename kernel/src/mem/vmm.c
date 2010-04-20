@@ -171,3 +171,8 @@ static uint8_t* vmm_resize_heap(uint32_t nbytes)
     return old_kernel_heap_end;
 }
 
+uint32_t vmm_get_kernel_heap_end()
+{
+    return (uint32_t)kernel_heap_end;
+}
+
