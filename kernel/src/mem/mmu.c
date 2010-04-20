@@ -61,7 +61,6 @@ static uint32_t mmu_page_frame_2_PA(page_frame_t* page_frame);
  * @see mmu_page_frame_2_PA
  */
 static page_frame_t* mmu_PA_2_page_frame(uint32_t physical_address);
-static page_frame_t* get_PA_page_frame(uint32_t physical_address);
 
 /**
  * Dada una direccion fisica, devuelve el frame asociado a esta, pero lo quita de la lista de libres (si es que lo estaba)  
@@ -72,7 +71,6 @@ static page_frame_t* get_PA_page_frame(uint32_t physical_address);
  * @see  
  */
 static page_frame_t* mmu_get_page_frame(uint32_t physical_address);
-static page_frame_t* get_page_frame( uint32_t pa );
 
 /**
  * Decrementa las referencias del frame pasado como parametro. Si llegan a ser nulas, se agrega a la pila de libres.
@@ -279,7 +277,7 @@ void mmu_init(multiboot_info_t* mbd)
 	/* Marcamos las páginas como utilizadas */
 	kprint( "Marcando desde 0x%x hasta 0x%x\n", fa, la );
 	for ( i = fa; i < la; i += PAGE_SIZE ) {
-		get_PA_page_frame( KVA2PA(i) );
+		mmu_PA_2_page_frame( KVA2PA(i) );
 		kprint( "Marcando 0x%x\n", KVA2PA(i) );
 	}
 }
@@ -371,7 +369,7 @@ static uint32_t mmu_page_frame_2_PA(page_frame_t* page_frame)
     return (((uint32_t)page_frame - (uint32_t)mem_page_frames) / sizeof(page_frame_t)) * PAGE_SIZE;
 }
 
-static page_frame_t* get_PA_page_frame(uint32_t physical_address)
+static page_frame_t* mmu_PA_2_page_frame(uint32_t physical_address)
 {
     uint32_t k = physical_address / PAGE_SIZE;
     if( k < page_frames_count)
@@ -384,9 +382,9 @@ static page_frame_t* get_PA_page_frame(uint32_t physical_address)
     }
 }
 
-page_frame_t* get_page_frame( uint32_t pa )
+page_frame_t* mmu_get_page_frame( uint32_t pa )
 {
-    page_frame_t* frame = get_PA_page_frame( pa );
+    page_frame_t* frame = mmu_PA_2_page_frame( pa );
     if( frame )
     {
         //veo si estaba en la lista, para decrementar la cantidad de frames libres
@@ -435,7 +433,7 @@ uint8_t mmu_alloc_page(pde_t *pdt, page_frame_t *page_frame, uint32_t va, uint8_
             //Ya habia un frame asociado a "va"
             if( force_dealloc)
             {
-                page_frame_t *old_frame = PA2KVA(get_PA_page_frame(GET_BASE_ADDRESS(*pte)));
+                page_frame_t *old_frame = PA2KVA(mmu_PA_2_page_frame(GET_BASE_ADDRESS(*pte)));
                 page_dealloc(old_frame);
             }
             else
@@ -533,7 +531,7 @@ uint8_t mmu_free(pde_t *pdt, uint32_t va )
     pte_t *pte;
     if(mmu_dirwalk(pdt, va, &pte, 0) == E_MMU_SUCCESS)
     {
-        page_frame_t *frame = get_PA_page_frame((uint32_t)GET_BASE_ADDRESS(*pte));
+        page_frame_t *frame = mmu_PA_2_page_frame((uint32_t)GET_BASE_ADDRESS(*pte));
         page_dealloc(frame);
         //Invalido la va en la TLB
         //OJO: invalida la va de la PDT que esta instalada en este momento, cr3!
@@ -552,7 +550,7 @@ uint8_t mmu_free(pde_t *pdt, uint32_t va )
 uint8_t mmu_map_pa2va(pde_t *pdt, uint32_t pa, uint32_t va, uint8_t perm, uint8_t force_dealloc )
 {
     //Obtengo el page_frame (estuviera libre o no, puede ser que varias va esten mapeadas a un mismo frame)
-    page_frame_t *frame = get_page_frame(pa);
+    page_frame_t *frame = mmu_get_page_frame(pa);
     
     return mmu_alloc_page(pdt, frame, va, perm, force_dealloc);
 }
