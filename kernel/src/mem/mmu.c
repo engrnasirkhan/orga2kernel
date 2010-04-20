@@ -418,25 +418,24 @@ static uint8_t mmu_alloc_page(pde_t *pdt, page_frame_t *page_frame, uint32_t va,
     uint32_t pd_offset = GET_PD_OFFSET(va);
     uint32_t pt_offset = GET_PT_OFFSET(va);
     
-    pte_t *pte = NULL;
-    pte_t old_pte = *(mmu_get_pte(pdt, va));
-      
+    pte_t *pte = mmu_get_pte(pdt, va);
+    
+    if(pte && IS_PRESENT(*pte))
+    {
+        //Ya hay un mapeo para esa va
+        if( force_dealloc)
+        {
+            page_frame_t *old_frame = (page_frame_t*)PA2KVA(mmu_PA_2_page_frame(GET_BASE_ADDRESS(*pte)));
+            mmu_free_page_frame(old_frame);
+        }
+        else
+        {
+            return E_MMU_INVALID_VA;
+        }
+    }
+    
     if(mmu_dirwalk(pdt, va, &pte, 1, IS_USER_PAGE(perm)) == E_MMU_SUCCESS)
     {
-        if(*pte == old_pte)
-        {
-            //Ya habia un frame asociado a "va"
-            if( force_dealloc)
-            {
-                page_frame_t *old_frame = (page_frame_t*)PA2KVA(mmu_PA_2_page_frame(GET_BASE_ADDRESS(*pte)));
-                mmu_free_page_frame(old_frame);
-            }
-            else
-            {
-                return E_MMU_INVALID_VA;
-            }
-        }
-        
         //Incrementamos la cantidad de referencias
         page_frame->ref_count++;
         *pte = mmu_page_frame_2_PA(page_frame) | perm | PAGE_PRESENT;
