@@ -662,7 +662,7 @@ uint8_t mmu_alloc(uint32_t *pdt, uint32_t *va, uint32_t *pa, uint8_t perm)
         if(free_frame != NULL)
         {
             *pa = mmu_page_frame_2_PA(free_frame);
-            return mmu_alloc_page(pdt, free_frame, *va, perm, 0);
+            return mmu_alloc_page(pdt, free_frame, *va, perm, IS_USER_PAGE(perm));
         }
         else
         {
