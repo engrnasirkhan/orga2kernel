@@ -140,16 +140,6 @@ void kmain(multiboot_info_t* mbd, unsigned int magic ){
     kprint("llego\n");
     key_init();
     key_register(menu, 1);
-    key_register(mostrar_slot, 59);
-    key_register(mostrar_slot, 60);
-    key_register(mostrar_slot, 61);
-    key_register(mostrar_slot, 62);
-    key_register(mostrar_slot, 63);
-    key_register(mostrar_slot, 64);
-    key_register(mostrar_slot, 65);
-    key_register(mostrar_slot, 66);
-    key_register(mostrar_slot, 67);
-    key_register(mostrar_slot, 68);
     kprint("binding keys done\n");
     tty_t kernel_tty;
     if(tty_init(&kernel_tty, NULL)){
@@ -198,7 +188,6 @@ void kmain(multiboot_info_t* mbd, unsigned int magic ){
 	set_irq_handler( 1, &irq_keyboard );
 	
 	sti();
-
 	for (;;) __asm__ __volatile__ ( "hlt" );
 }
 

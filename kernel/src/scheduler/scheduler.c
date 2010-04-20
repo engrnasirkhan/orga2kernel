@@ -17,20 +17,19 @@
 
 //Funcion que muestra menu
 void menu(key s){
-	return; 
 	//__asm__ __volatile__ ("xchg %bx,%bx");
-kclrscreen();
-kprint("Menu miOS: Como operar \n \n \n \n");
-kprint("- Para cargar programa: cargar letra_de_programa numero_de_slot (1-10).\n");
-kprint("        ej:  cargar c 4  Para cargar programa c en slot 4 \n \n");
-kprint("- Para matar un programa: matar numero_de_slot \n");
-kprint("        ej:  matar 5 \n \n");
-kprint("- Para cambiar quantum: quantum numero_de_slot valor(1-20) \n");
-kprint("        ej:  quantum numero_de_slot 13 \n \n \n\n \n \n \n \n");
+    kclrscreen();
+    kprint("Menu miOS: Como operar \n \n \n \n");
+    kprint("- Para cargar programa: cargar letra_de_programa numero_de_slot (1-10).\n");
+    kprint("        ej:  cargar c 4  Para cargar programa c en slot 4 \n \n");
+    kprint("- Para matar un programa: matar numero_de_slot \n");
+    kprint("        ej:  matar 5 \n \n");
+    kprint("- Para cambiar quantum: quantum numero_de_slot valor(1-20) \n");
+    kprint("        ej:  quantum numero_de_slot 13 \n \n \n\n \n \n \n \n");
 
-// notar que cuando decimos numero de slot, tenemos que tener en cuenta
-// que tarea i esima esta en el numero de slot i-esimo + 1
-// Osea que si alguien quiere crear una tarea en el slot i, debemos pasarle a la funcion que las crea el numero de tarea i-1
+    // notar que cuando decimos numero de slot, tenemos que tener en cuenta
+    // que tarea i esima esta en el numero de slot i-esimo + 1
+    // Osea que si alguien quiere crear una tarea en el slot i, debemos pasarle a la funcion que las crea el numero de tarea i-1
 }
 
 
