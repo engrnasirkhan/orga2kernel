@@ -158,7 +158,7 @@ void crear_kthread( programs_t *programa, char id ) {
 	nueva_tss->cr3 = getCR3();
 	nueva_tss->eflags = KERNEL_FLAGS;
 	nueva_tss->eip = (uint32_t) programa->va_entry;
-	nueva_tss->esp = pila_va;
+	nueva_tss->esp = pila_va + PAGE_SIZE;
 	nueva_tss->cs = KERNEL_CS;
 	nueva_tss->ds = KERNEL_DS;
 	nueva_tss->es = KERNEL_DS;
@@ -196,6 +196,8 @@ void crear_tarea( programs_t *programa, char id ) {
 	uint32_t pdt_va, pdt_pa;
 	uint32_t tss_va;
 	uint32_t paginas, i;
+	uint32_t stack3_va, stack3_pa;
+	uint32_t stack0_va, stack0_pa;
 	uint32_t va, pa;
 	uint32_t oldcr3;
 	pde_t *pdt;
@@ -268,8 +270,14 @@ void crear_tarea( programs_t *programa, char id ) {
 	memset( (void *) programa->va_bss, 0, programa->va_bssend - programa->va_bss );
 	setCR3( oldcr3 );
 
-	/* Ahora pedimos un espacio cualquier para la pila. */
-	if ( mmu_alloc( pdt, &va, &pa, PAGE_PRESENT | PAGE_RW | PAGE_USER ) != E_MMU_SUCCESS ) {
+	/* Ahora pedimos un espacio cualquiera para la pila de usuario. */
+	if ( mmu_alloc( pdt, &stack3_va, &stack3_pa, PAGE_PRESENT | PAGE_RW | PAGE_USER ) != E_MMU_SUCCESS ) {
+		kprint( "Error al pedir pila para el proceso.\n" );
+		return;
+	}
+
+	/* Y otro para la pila de kernel. */
+	if ( mmu_alloc( pdt, &stack0_va, &stack0_pa, PAGE_PRESENT | PAGE_RW | PAGE_SUPERVISOR ) != E_MMU_SUCCESS ) {
 		kprint( "Error al pedir pila para el proceso.\n" );
 		return;
 	}
@@ -278,7 +286,9 @@ void crear_tarea( programs_t *programa, char id ) {
 	nueva_tss->cr3 = pdt_pa;
 	nueva_tss->eflags = USER_FLAGS; //0x296;
 	nueva_tss->eip = (uint32_t) programa->va_entry;
-	nueva_tss->esp = va;
+	nueva_tss->esp = stack3_va + PAGE_SIZE;
+	nueva_tss->ss0 = KERNEL_DS;
+	nueva_tss->esp0 = stack0_va + PAGE_SIZE;
 	nueva_tss->cs = USER_CS;
 	nueva_tss->ds = USER_DS;
 	nueva_tss->es = USER_DS;

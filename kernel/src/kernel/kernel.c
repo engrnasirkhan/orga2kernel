@@ -7,6 +7,7 @@
 #include <asm/gdt.h>
 #include <asm/idt.h>
 #include <asm/handlers.h>
+#include <asm/syscalls.h>
 #include <kernel/globals.h>
 #include <mem/memlayout.h>
 #include <mem/vmm.h>
@@ -20,19 +21,20 @@
 //funcion que inicializa gran parte de las estructuras del kernel
 extern void kinit ( multiboot_info_t* mbd ) __init;
 
-/* ebx = fd de salida.
- * ecx = puntero (en espacio de usuario).
- * edx = tamaño.
+/* ARG1 = fd de salida.
+ * ARG2 = puntero (en espacio de usuario).
+ * ARG3 = tamaño.
  */
 int sys_write( struct registers *r ) {
 	int i;
-	const char *str = (const char *) r->ecx;
-	if ( r->ebx != 1 ) return -1;
+	const char *str = (const char *) ARG2(r);
+	if ( ARG1(r) != 1 ) return -1;
+
 
 	/* if ( chequear_direccion(r->ecx, r->edx) == MALA ) return -1; */
-	for ( i = 0; i < r->edx; i++ )
+	for ( i = 0; i < ARG3(r); i++ )
 		kputc( str[i] );
-	return r->edx;
+	return ARG3(r);
 }
 
 /* Nota, hay que mandarle el EOI al PIC porque scheduler() NO vuelve,
@@ -78,14 +80,28 @@ int teclado( struct registers *r ) { return 0; }
 
 int pf( struct registers *r ) {
 	cli();
+
+	uint32_t cr2 = getCR2();
+	pde_t *cr3 = (pde_t *) PA2KVA(GET_BASE_ADDRESS(getCR3()));
+	pte_t *pte = (pte_t *) PA2KVA(GET_BASE_ADDRESS(cr3[ GET_PD_OFFSET(cr2) ]));
+
 	kprint( r->errcode & 1 ? "Page level protection\n" : "Page not present\n" );	
 	kprint( r->errcode & 2 ? "Write error\n" : "Read error\n" );
 	kprint( r->errcode & 4 ? "User mode\n" : "Supervisor mode\n" );	
 	kprint( r->errcode & 8 ? "Reserved bits en 1 en PD\n" : "Reserved bits en 0 en PD\n" );	
 	kprint( r->errcode & 16 ? "Instruction Fetch\n" : "No fue Instruction Fetch\n" );	
-	kprint( "CR2: 0x%x\nDir: 0x%x:0x%x\n",
-		getCR2(),
-		r->cs, r->eip );
+	kprint( "CR2: 0x%x\nDir: 0x%x:0x%x\n", cr2, r->cs, r->eip );
+	
+	if ( cr2 < KERNEL_MEMMAP ) {
+		kprint ( "PDE Flags: %x\n", cr3[ GET_PD_OFFSET(cr2) ] & 0xF );
+		kprint ( "PTE Flags: %x\n", pte[ GET_PT_OFFSET(cr2) ] & 0xF );
+		if ( r->errcode & 1 ) { // Si estaba presente le arreglo esto.
+			kprint ( "Arreglando.\n" );
+			cr3[ GET_PD_OFFSET(cr2) ] |= PAGE_USER | PAGE_RW;
+			invlpg( GET_BASE_ADDRESS(cr2) );
+			return 0;
+		}
+	}
 	for (;;) hlt();
 }
 
@@ -161,7 +177,8 @@ void kmain(multiboot_info_t* mbd, unsigned int magic ){
 				crear_tarea( (programs_t *) mod->mod_start, i );
 			}
 	}
-#else
+#endif
+#if 0
 	programs_t p1, p2, p3;
 
 	p1.va_entry = pruebatarea;
@@ -172,6 +189,12 @@ void kmain(multiboot_info_t* mbd, unsigned int magic ){
 	crear_kthread( &p2, 1 );
 	crear_kthread( &p3, 2 );
 #endif
+	extern unsigned char ej1[];
+	extern unsigned char ej2[];
+	programs_t *p1 = (programs_t *) ej1;
+	programs_t *p2 = (programs_t *) ej2;
+	crear_tarea( p1, 0 );
+	crear_tarea( p2, 1 );
 
 	set_irq_handler( 0, &timer );
 	set_irq_handler( 1, &teclado );

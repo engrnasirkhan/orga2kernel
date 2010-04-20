@@ -3,6 +3,11 @@
 #include <string.h>
 #include <time.h>
 
+void main() {
+	for (;;) puts( "Proceso 1" );
+}
+
+/*
 int main( const char *argv ) {
 	printf ( "Argumentos: %s\n", argv );
 	puts ( "Numes aleatorios:" );
@@ -13,7 +18,7 @@ int main( const char *argv ) {
 		return 123456789;
 	return 987654321;
 }
-
+*/
 /*
 int main(int argc, char **argv) {
 	printf ( "Argumentos: %d\n", argc );

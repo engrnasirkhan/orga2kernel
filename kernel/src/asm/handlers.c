@@ -142,7 +142,6 @@ void clear_isr_handler( int isr ) {
 }
 
 void syscall_table_entry( struct registers regs ) {
-	kprint("Syscall %d\n", regs.eax );
 	if ( regs.eax > NR_SYSCALLS  || !syscall_table[regs.eax] ) {
 		debug( "Syscall %d desconocida.\n", regs.eax );
 		return;

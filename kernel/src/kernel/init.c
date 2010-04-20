@@ -52,11 +52,8 @@ void kinit ( multiboot_info_t* mbd ) {
 
 	// Inicializamos la IDT.
 	g_IDTr.limit = sizeof(g_IDT) - 1;
-	//g_IDTr.base = (uint32_t) g_IDT - 0x80000000;
-	g_IDTr.base = KVA2PA((uint32_t)g_IDT);
-	// Por lo que entiendo, LIDT puede leer una dirección virtual.
-	//lidt( (void *) ((unsigned long) &g_IDTr - 0x80000000) ); // Dirección física
-	lidt( (void *) ( KVA2PA((unsigned long)&g_IDTr))); // Dirección física
+	g_IDTr.base = (uint32_t) g_IDT;
+	lidt( (void *) &g_IDTr ); // Dirección lineal
 	init_isrs();
 	init_irqs();
 	init_syscalls();

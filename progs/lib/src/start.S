@@ -2,6 +2,7 @@
 # Primero se encuentra esta tabla:
 .sect .text
 .global __start
+.extern main
 
 .long 0x00455845 # "EXE\0"
 .long __start # Entry point :-)
@@ -27,7 +28,7 @@
 #	jmp 1b
 
 __start:
-	pushl 4(%esp)
+	#pushl 4(%esp)
 	call main
-	addl $4, %esp
+	#addl $4, %esp
 	ret

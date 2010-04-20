@@ -467,8 +467,13 @@ void page_dealloc(page_frame_t *frame)
 uint8_t mmu_dirwalk(pde_t *pdt, uint32_t va, pte_t **pte, uint8_t create_page_table)
 {
     uint32_t pd_offset = GET_PD_OFFSET(va);
-    uint32_t pt_offset = GET_PT_OFFSET(va);    
-    
+    uint32_t pt_offset = GET_PT_OFFSET(va);
+	
+	 /* Con esto nos aseguramos que el usuario pueda
+	  * accederlo, sólo si el pte tiene los permisos
+	  * adecuados.
+	  */
+	 pdt[pd_offset] |= PAGE_USER | PAGE_RW;
     if(IS_PRESENT(pdt[pd_offset]))
     {
         //Buenisimo, la pagina estaba presente asi que devolvemos la pte
