@@ -78,6 +78,8 @@ int tty_init(tty_t* tty, tty_buffer_out_f out_f) {
     kprint_tty(prompt);
     return false;
 }
+
+/** encuentra el struct correspondiente a esta tty */
 struct tty_tty_node * tty_tty_find(tty_t* tty){
     struct tty_tty_node * node = tty_tty_list;
     while(node != NULL){
@@ -108,11 +110,12 @@ int tty_tty_change(tty_t* tty_number){
     return false;
 }
 
-
+/** agrega una tty , recibe como entrada tty_buffer_out*/
 int tty_tty_add(tty_t* tty, tty_buffer_out_f out_f){
     struct tty_tty_node * node = kmalloc(sizeof(struct tty_tty_node));
     if(node == NULL){
         //si fallo malloc
+        kprint("fallo kmalloc\n");
         return true;
     }
     if(tty_tty_list == NULL){
@@ -137,6 +140,7 @@ int tty_tty_add(tty_t* tty, tty_buffer_out_f out_f){
 
 bool tty_get_key(tty_t* tty){
     if(tty_tty_actual->expects_char){
+        // TODO: terminar
         return true;
     }
     tty_tty_actual->expects_char = true;
@@ -145,6 +149,7 @@ bool tty_get_key(tty_t* tty){
 
 bool tty_get_string(tty_t* tty){
     if(tty_tty_actual->expects_string){
+        // TODO: terminar
         return true;
     }
     tty_tty_actual->expects_string = true;

@@ -14,17 +14,13 @@ struct key_handler_node * key_is_registered(key tecla);
 int key_register(key_handler_t funcion, key clave){
     key_handler_node_t *node = key_is_registered(clave);
     if(node != NULL){
-        kprint("2do o mas\n");
         node->handler = funcion;
     } else {
         int tamanio = sizeof(key_handler_node_t);
-        kprint("primero %d\n", tamanio);
         key_handler_node_t *nuevo = (key_handler_node_t*)kmalloc(tamanio);
         if(nuevo == NULL){
-            kprint("OUT OF MEMORY");
             return 1;
         }
-        kprint("pidio memoria\n");
         nuevo->tecla = clave;
         nuevo->handler = funcion;
         nuevo->next = (void*)key_handler_list;

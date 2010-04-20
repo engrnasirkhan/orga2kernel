@@ -137,7 +137,6 @@ void kmain(multiboot_info_t* mbd, unsigned int magic ){
     //Ahora si, usando mbd que apunta bien a los datos del grub, inicializamos todo
     kinit( mbd );
 
-#if 0
     kprint("llego\n");
     key_init();
     key_register(menu, 1);
@@ -156,7 +155,6 @@ void kmain(multiboot_info_t* mbd, unsigned int magic ){
     if(tty_init(&kernel_tty, NULL)){
         panic("fallo  el inicio de las tty");
     }
-#endif
 	//Lanzamos programa para cargar tareas y modificar quantums.
 	set_isr_handler( 14, &pf ); // #PF
 
@@ -191,13 +189,13 @@ void kmain(multiboot_info_t* mbd, unsigned int magic ){
 #endif
 	extern unsigned char ej1[];
 	extern unsigned char ej2[];
-	programs_t *p1 = (programs_t *) ej1;
+	/*programs_t *p1 = (programs_t *) ej1;
 	programs_t *p2 = (programs_t *) ej2;
 	crear_tarea( p1, 0 );
-	crear_tarea( p2, 1 );
+	crear_tarea( p2, 1 );*/
 
 	set_irq_handler( 0, &timer );
-	set_irq_handler( 1, &teclado );
+	set_irq_handler( 1, &irq_keyboard );
 	
 	sti();
 
