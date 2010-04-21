@@ -7,6 +7,7 @@
  \usepackage[spanish]{babel}   %ver bien como es
 \usepackage[utf8]{inputenc}
 
+
 \begin{document}
 
 \tableofcontents
@@ -16,10 +17,31 @@
 
 \section*{Introducci\'on}
 \addcontentsline{toc}{section}{Introducci\'on}
+El siguiente trabajo tiene como fin aplicar los conocimientos adquiridos en Organización del Computador II, Dpto de Computación, Facultad de Ciencias Exactas y Naturales, Universidad de Buenos Aires.	El proyecto incluye la creacion de un "Sistema Operativo" programado en el lenguaje C++.
+
 
 
 \section*{Organizaci\'on del C\'odigo Fuente}
 \addcontentsline{toc}{section}{Organizaci\'on del C\'odigo Fuente}
+A continuacion se presenta la jerarquia del codigo fuente.
+
+\begin{figure}[H]
+\centering
+\subfloat{\includegraphics[width=0.8\textwidth]{imagenes/goblal.png}}
+\caption{Diagrama de jerarquia de archivos.}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\subfloat{\includegraphics[width=0.8\textwidth]{imagenes/diagrama_de_archivos_include.png}}
+\caption{Diagrama de jerarquia de archivos (cont).}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\subfloat{\includegraphics[width=0.8\textwidth]{imagenes/diagrama_de_archivos_src.png}}
+\caption{Diagrama de jerarquia de archivos (cont).}
+\end{figure}
 
 
 \section*{Bootloader}
@@ -32,9 +54,12 @@ El administrador de memoria cuenta con la siguientes funciones exportables:
 
 \begin{itemize}
 \item \begin{verbatim} void mmu_init(multiboot_info_t  mbd) \end{verbatim} 
-\item \begin{verbatim} uint8_t mmu_alloc(uint32_t  pdt, uint32_t  va, uint32_t  pa, uint8_t perm) \end{verbatim} 
-\item \begin{verbatim} uint8_t mmu_alloc_at_VA( pde_t  pdt, uint32_t va, uint8_t perm, uint8_t force_dealloc ) \end{verbatim} 
-\item \begin{verbatim} uint8_t mmu_map_pa2va(pde_t  pdt, uint32_t pa, uint32_t va, uint8_t perm, uint8_t force_dealloc ) \end{verbatim}    
+\item \begin{verbatim} uint8_t mmu_alloc(uint32_t  pdt, uint32_t  va, uint32_t  pa,
+ uint8_t perm) \end{verbatim} 
+\item \begin{verbatim} uint8_t mmu_alloc_at_VA( pde_t  pdt, uint32_t va, uint8_t perm,
+ uint8_t force_dealloc ) \end{verbatim} 
+\item \begin{verbatim} uint8_t mmu_map_pa2va(pde_t  pdt, uint32_t pa, uint32_t va, uint8_t perm,
+ uint8_t force_dealloc ) \end{verbatim}    
 \item \begin{verbatim} uint8_t mmu_free( pde_t  pdt, uint32_t va ) \end{verbatim} 
 \item \begin{verbatim} uint32_t mmu_get_free_frame_count() \end{verbatim} 
 \item \begin{verbatim} uint8_t mmu_install_task_pdt(uint32_t  va, uint32_t  pa) \end{verbatim} 
@@ -225,5 +250,6 @@ void crear_tarea(programs programa, char numero_tarea){
 
 \section*{C\'omo usar el SO}
 \addcontentsline{toc}{section}{C\'omo usar el SO}
-
+Para ir al menu se debe presionar la tecla Esc. Ahi mismo podra ingresar todo lo que el menu lo ofrece mediante las instruciones detalladas.
+Con las teclas F1, F2,...,F10 podra moverse entre las tareas que tiene en ejecución.
 \end{document}
