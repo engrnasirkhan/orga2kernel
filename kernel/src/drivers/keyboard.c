@@ -54,6 +54,7 @@ int irq_keyboard( struct registers *r ) {
     if( !(tecla & 0x80) ){
         //key has been pressed
         struct key_handler_node * handler_node = key_is_registered(tecla);
+        //si existe algun handler para esa tecla
         if(handler_node != NULL) {
             handler_node->handler(tecla);
         } else {

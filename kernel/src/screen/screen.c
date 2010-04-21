@@ -274,7 +274,7 @@ void kclrscreen()
 void clear_screen_bios()
 {
     int32_t i,j;
-    for(i=0; i<SCREEN_BIOS_ROWS; i++)
+    for(i=0; i<SCREEN_BIOS_TTY_ROW - 1; i++)
     {
         for(j=0; j<SCREEN_BIOS_COLS; j++)
         {

@@ -12,26 +12,29 @@
 #include <kernel/panic.h>
 #include <drivers/keyboard.h>
 #include <string.h>
+#include <tty/tty.h>
 
 #define limite_nueva_tss 0x67
 
-//Funcion que muestra menu
+extern tty_t tty_kernel;
+
+//Funcion que muestra menu y parsea los comandos.
 void menu(key s){
 	//__asm__ __volatile__ ("xchg %bx,%bx");
     kclrscreen();
     kprint("Menu miOS: Como operar \n \n \n \n");
     kprint("- Para cargar programa: cargar letra_de_programa numero_de_slot (1-10).\n");
-    kprint("        ej:  cargar c 4  Para cargar programa c en slot 4 \n \n");
+    kprint("        ej:  cargar 4  Para cargar programa en slot 4 \n \n");
     kprint("- Para matar un programa: matar numero_de_slot \n");
     kprint("        ej:  matar 5 \n \n");
     kprint("- Para cambiar quantum: quantum numero_de_slot valor(1-20) \n");
     kprint("        ej:  quantum numero_de_slot 13 \n \n \n\n \n \n \n \n");
-
-    // notar que cuando decimos numero de slot, tenemos que tener en cuenta
-    // que tarea i esima esta en el numero de slot i-esimo + 1
-    // Osea que si alguien quiere crear una tarea en el slot i, debemos pasarle a la funcion que las crea el numero de tarea i-1
+    tty_get_string(&tty_kernel);
 }
-
+void menu_in(uint8_t* c) {
+    kprint("FUNCION QUE PARSEA LA ENTRADA Y DECIDE QUE HACER(SCHEDULER.C)\n");
+    tty_get_string(&tty_kernel);
+}
 
 //Funcion de scheduler
 void scheduler(){	
@@ -53,7 +56,7 @@ void scheduler(){
 	//uint16_t selector_prox = (gdt_indice << 3) | 3;
 	uint16_t selector_prox = (gdt_indice << 3) | 0; // TODO: Usar el de arriba.
 
-	__asm__ __volatile__ ("xchg %bx,%bx" );
+	//__asm__ __volatile__ ("xchg %bx,%bx" );
 	__asm__ __volatile__ (
 		"pushl %0\n\t"
 		"pushl $0\n\t"
@@ -122,8 +125,6 @@ void iniciar_scheduler(){
 	//Pongo en 0 contador actualizar pantalla
 	contador_actualizar_pantalla = 0;
 	
-	//Lanzamos programa menu
-	menu(1);
 }
 
 

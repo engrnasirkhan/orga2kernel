@@ -20,7 +20,7 @@
 
 //funcion que inicializa gran parte de las estructuras del kernel
 extern void kinit ( multiboot_info_t* mbd ) __init;
-
+tty_t tty_kernel;
 /* ARG1 = fd de salida.
  * ARG2 = puntero (en espacio de usuario).
  * ARG3 = tamaño.
@@ -141,8 +141,7 @@ void kmain(multiboot_info_t* mbd, unsigned int magic ){
     key_init();
     key_register(menu, 1);
     kprint("binding keys done\n");
-    tty_t kernel_tty;
-    if(tty_init(&kernel_tty, NULL)){
+    if(tty_init(&tty_kernel, menu_in)){
         panic("fallo  el inicio de las tty");
     }
 	//Lanzamos programa para cargar tareas y modificar quantums.
@@ -183,11 +182,13 @@ void kmain(multiboot_info_t* mbd, unsigned int magic ){
 	programs_t *p2 = (programs_t *) ej2;
 	crear_tarea( p1, 0 );
 	crear_tarea( p2, 1 );
-
+    
 	set_irq_handler( 0, &timer );
 	set_irq_handler( 1, &irq_keyboard );
-	
+    menu(1);
 	sti();
+    //Lanzamos programa menu
+	
 	for (;;) __asm__ __volatile__ ( "hlt" );
 }
 

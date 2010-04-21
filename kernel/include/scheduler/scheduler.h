@@ -35,6 +35,9 @@ char contador_actualizar_pantalla;	//Contador que sirve para actualizar buffer d
 //Funcion que muestra menu
 void menu(key s);
 
+//Funcion que almacena el buffer de input de menu.
+void menu_in(uint8_t*);
+
 //Funcion de scheduler
 void scheduler();
 

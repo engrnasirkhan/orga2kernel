@@ -22,13 +22,17 @@ uint8_t * prompt = "~$ ";
 void tty_put_key(key tecla){
         char * letra = "X\0";
         char * tab = "    \0";
+        bool isChar = true;
         letra[0] = scan2ascii[tecla];
-            
         if(letra[0] == '\n'){
             tty_tty_actual->buff[tty_tty_actual->buff_pos] = '\n';
             tty_tty_actual->buff[tty_tty_actual->buff_pos+1] = '\0';
             kprint(tty_tty_actual->buff);
             kprint_tty_clear();
+            if(tty_tty_actual->expects_string) {
+                tty_tty_actual->expects_string = false;
+                tty_tty_actual->buffer_out(tty_tty_actual->buff);
+            }
             tty_tty_actual->buff_pos = 0;
             tty_tty_actual->buff[0] = '\0';
             kprint_tty(prompt);
@@ -58,6 +62,7 @@ void tty_put_key(key tecla){
                 kprint_tty_clear();
             }
         } else {
+            isChar = false;
             kprint("Usted apreto la tecla numero: %d\n", tecla);
             kprint("tecla desconocida, se agradece si usted la agrega\n");
         }
@@ -66,6 +71,10 @@ void tty_put_key(key tecla){
             tty_tty_actual->buff_pos = 0;
         }
         tty_tty_actual->buff[tty_tty_actual->buff_pos] = '\0';
+        if(isChar && tty_tty_actual->expects_char) {
+            tty_tty_actual->buffer_out(letra);
+            tty_tty_actual->expects_char = false;
+        }
 }
 
 /** inicializa las tty */
@@ -123,7 +132,7 @@ int tty_tty_add(tty_t* tty, tty_buffer_out_f out_f){
         *tty = 1;
     } else {
         // le doy elsiguiente.
-        *tty = tty_tty_list->tty;
+        *tty = tty_tty_list->tty + 1;
     }
     node->tty = *tty;
     node->buff[0] = '\0';
@@ -140,7 +149,6 @@ int tty_tty_add(tty_t* tty, tty_buffer_out_f out_f){
 
 bool tty_get_key(tty_t* tty){
     if(tty_tty_actual->expects_char){
-        // TODO: terminar
         return true;
     }
     tty_tty_actual->expects_char = true;
@@ -149,7 +157,6 @@ bool tty_get_key(tty_t* tty){
 
 bool tty_get_string(tty_t* tty){
     if(tty_tty_actual->expects_string){
-        // TODO: terminar
         return true;
     }
     tty_tty_actual->expects_string = true;
