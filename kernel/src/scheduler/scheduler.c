@@ -89,12 +89,14 @@ void matar_tarea(char numero_tarea){
 
 //Funcion para mostrar un slot en particular
 void mostrar_slot(key s){
+	memcpy( (void *) 0x800b8000, ( void * ) tareas[s-59].pantalla, 80 * 25 * 2 );
+	/*
 	//Funcion que pasa del buffer de pantalla de la tarea que se quiere mostrar, a la pantalla
 	char * b_pantalla;
 	b_pantalla = (char *) 0x800b8000;
 	for(unsigned int a=0; a< tam_buffer_pantalla; ++a) {
 		b_pantalla[a]= (tareas[s]).pantalla[a];
-	}
+	}*/
 }
 
 
@@ -270,6 +272,7 @@ void crear_tarea( programs_t *programa, char id ) {
 		return;
 	}
 	if ( mmu_map_pa2va( (pde_t *) pdt_va, KVA2PA( virtual_video_kernel ), 0xb8000, PAGE_USER | PAGE_RW | PAGE_PRESENT, 0 ) != E_MMU_SUCCESS ) {
+	//if ( mmu_map_pa2va( (pde_t *) pdt_va, 0xb8000, 0xb8000, PAGE_USER | PAGE_RW | PAGE_PRESENT, 0 ) != E_MMU_SUCCESS ) {
 		kprint( "Error al mapear buffer de video.\n" );
 		return;
 	}
