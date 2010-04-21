@@ -32,6 +32,8 @@ int tty_tty_add(tty_t* tty, tty_buffer_out_f out_f);
 /* cambia al tty designado */
 int tty_tty_change(tty_t* tty);
 
+struct tty_tty_node * tty_tty_find(tty_t* tty);
+
 
 
 

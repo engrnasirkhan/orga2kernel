@@ -33,6 +33,7 @@ void menu(key s){
 }
 void menu_in(uint8_t* c) {
     kprint("FUNCION QUE PARSEA LA ENTRADA Y DECIDE QUE HACER(SCHEDULER.C)\n");
+	 kprint( "Cadena: %s\n", tty_tty_find(&tty_kernel)->buff );
     tty_get_string(&tty_kernel);
 }
 
