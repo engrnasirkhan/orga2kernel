@@ -192,6 +192,8 @@ void crear_kthread( programs_t *programa, char id ) {
  * @param[in] id Indica el número de slot a utilizar por la tarea.
  */
 void crear_tarea( programs_t *programa, char id ) {
+	cli() 
+	
 	reg_t flags;
 	uint32_t pdt_va, pdt_pa;
 	uint32_t tss_va;
@@ -309,5 +311,15 @@ void crear_tarea( programs_t *programa, char id ) {
 	/* Ya mapeamos todo, ahora construimos la TSS :-) */
 	gdt_fill_tss_segment( g_GDT + id + offset_gdt_tareas, (void *) tss_va, 0x67, 0 );
 
+
+//Pido pagina para buffer mapeado en kernel, la pido con mmu_alloc para tener tambien la fisica
+	uint32_t virtual_video_kernel;
+	uint32_t fisica_video_kernel;
+	if ((mmu_alloc( (pde_t *) PA2KVA(getCR3()), &virtual_video_kernel, &fisica_video_kernel, 2 ))== E_MMU_NO_MEMORY) kprint("Error pedir pag buffer video nueva tarea");
+	if( (mmu_map_pa2va( (pde_t *) pdt_va, fisica_video_kernel,0xb8000,PAGE_USER,1))!=E_MMU_SUCCESS) kprint("Error mmu_map_pa2va");
+
+
 	unmask_ints(flags);
+	
+	sti();
 }
