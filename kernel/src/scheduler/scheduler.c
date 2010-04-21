@@ -23,7 +23,7 @@ void menu(key s){
 	//__asm__ __volatile__ ("xchg %bx,%bx");
     kclrscreen();
     kprint("Menu miOS: Como operar \n \n \n \n");
-    kprint("- Para cargar programa: cargar letra_de_programa numero_de_slot (1-10) Tenemos 5 progras distintos (a,b,c,d,e).\n");
+    kprint("- Para cargar programa: cargar letra_de_programa numero_de_slot (0-9) Tenemos 5 progras distintos (a,b,c,d,e).\n");
     kprint("        ej:  cargar a 4  (cargar programa  a  en slot 4)    \n \n");
     kprint("- Para matar un programa: matar numero_de_slot \n");
     kprint("        ej:  matar 5  (mata el programa que corria en slot 5) \n \n");
@@ -31,7 +31,7 @@ void menu(key s){
     kprint("        ej:  quantum 3 2 (cambia el quantum del programa que corre en slot 3 a 2\n \n \n\n \n \n \n \n");
     tty_get_string(&tty_kernel);
     
-   ///NOTA: cuando se refiern al slot i para nosotros es la tarea i-1
+   
 }
 void menu_in(uint8_t* c) {
 		//kprint("FUNCION QUE PARSEA LA ENTRADA Y DECIDE QUE HACER(SCHEDULER.C)\n");
@@ -47,33 +47,33 @@ uint8_t quantum;
 //matar =>  modo=1
 //quantum => modo=2
 
-if( entrada[0]=='c' && entrada[1]=='a' && entrada[2]=='r' && entrada[3]=='g' && entrada[4]=='a'&& entrada[5]=='r')	modo=0;
-if( entrada[0]=='m' && entrada[1]=='a' && entrada[2]=='t' && entrada[3]=='a' && entrada[4]=='r') modo=1;
-if( entrada[0]=='q' && entrada[1]=='u' && entrada[2]=='a' && entrada[3]=='n' && entrada[4]=='t' && entrada[5]=='u' && entrada[6]=='m' )	modo=2;
+if( entrada[0]=='c' && entrada[1]=='a' && entrada[2]=='r' && entrada[3]=='g' && entrada[4]=='a'&& entrada[5]=='r' && entrada[6]==' ' && entrada[8]==' '  &&  (entrada[7]<'f') && (entrada[7]>='a') && ( entrada[9]<='9' ) && ( entrada[9]>='0' ) )	modo=0;
+if( entrada[0]=='m' && entrada[1]=='a' && entrada[2]=='t' && entrada[3]=='a' && entrada[4]=='r' && entrada[5]==' ' && ( entrada[6]<='9' ) && ( entrada[6]>='0' ) ) modo=1;
+if( entrada[0]=='q' && entrada[1]=='u' && entrada[2]=='a' && entrada[3]=='n' && entrada[4]=='t' && entrada[5]=='u' && entrada[6]=='m' && entrada[7]==' ' )	modo=2;
 
 
 if(modo==0){
 	letra_tarea= entrada[7];
-	numero_slot= entrada[9] - '1';	
+	numero_slot= entrada[9] - '0';	
 	crear_tarea( programas[ letra_tarea - 'a'], numero_slot);
 	kprint("Cargo el programa ");
 	kprint((char) letra_tarea);
 	kprint(" en el slot ");
-	kprint("%i \n", numero_slot + 1);
+	kprint("%i \n", numero_slot );
 }
 
 if(modo==1){
 	numero_slot= entrada[6] - '0';	 
-	matar_tarea(numero_slot-1);
+	matar_tarea(numero_slot);
 	kprint("Mato la tarea del slot ");
-	kprint("%i \n", numero_slot);
+	kprint("%i \n", numero_slot+ '0');
 }
 
 if(modo==2){
 	numero_slot= entrada[8] - '0';	
 	quantum= entrada[10] - '0';	
 	if( 0< quantum && quantum <21){
-		 tareas[numero_slot-1].quantum_fijo = (int) quantum;
+		 tareas[numero_slot].quantum_fijo = (int) quantum;
 	kprint("Cambio el quantum del slot ");
 	kprint(numero_slot);
 	kprint(" al valor ");
@@ -135,6 +135,9 @@ void matar_tarea(char numero_tarea){
 
 //Voy a poner en cero la estructura de la tarea
 	tareas[numero_tarea].hay_tarea = 0;
+	tareas[numero_tarea].quantum_fijo = 0;
+	tareas[numero_tarea].pantalla = 0;
+	
 
 //Voy a pasarle la direccion de la pdt a un funcion de mmu para que libera todo lo respecto a ella
 	///TODO: faltaria funcion que le pase una pdt y borre todo lo referido a esta
@@ -145,14 +148,9 @@ void matar_tarea(char numero_tarea){
 
 //Funcion para mostrar un slot en particular
 void mostrar_slot(key s){
-	memcpy( (void *) 0x800b8000, ( void * ) tareas[s-59].pantalla, 80 * 25 * 2 );
-	/*
-	//Funcion que pasa del buffer de pantalla de la tarea que se quiere mostrar, a la pantalla
-	char * b_pantalla;
-	b_pantalla = (char *) 0x800b8000;
-	for(unsigned int a=0; a< tam_buffer_pantalla; ++a) {
-		b_pantalla[a]= (tareas[s]).pantalla[a];
-	}*/
+if( tareas[s-59].hay_tarea) memcpy( (void *) 0x800b8000, ( void * ) tareas[s-59].pantalla, 80 * 25 * 2 );
+else menu(1);
+
 }
 
 
@@ -173,6 +171,7 @@ void iniciar_scheduler(){
 	
 	//Pongo como no hay_tarea, para cada tarea
 	for(char i=0; i<10; ++i) tareas[i].hay_tarea = 0;
+	for(char i=0; i<10; ++i) tareas[i].quantum_fijo = 0;
 	
 	//Tarea en pantalla = menu (-1)
 	tarea_en_pantalla = -1;
