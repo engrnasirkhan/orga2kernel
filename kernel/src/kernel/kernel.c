@@ -52,12 +52,12 @@ int timer( struct registers *r ) {
 	}
 		
 	//Referente a la actualizacion de pantalla activa
-	/*++contador_actualizar_pantalla;
+	++contador_actualizar_pantalla;
 	if(contador_actualizar_pantalla == TIEMPO_ACTUALIZCION) { 
 		contador_actualizar_pantalla == 0;
-		if( tarea_en_pantalla == -1 ) menu();
+		if( tarea_en_pantalla == -1 ) menu(0);
 		else mostrar_slot(tarea_en_pantalla);
-	}*/
+	}
 	
 	
 	//Referente a la decrementacion de quantum de tarea_activa
@@ -139,7 +139,26 @@ void kmain(multiboot_info_t* mbd, unsigned int magic ){
 
     kprint("llego\n");
     key_init();
+    
+    //Aca asigna Esc a la funcion menu
     key_register(menu, 1);
+    //Seteo Fs
+    key_register(mostrar_slot,59);
+    key_register(mostrar_slot,60);
+    key_register(mostrar_slot,61);
+    key_register(mostrar_slot,62);
+    key_register(mostrar_slot,63);
+    key_register(mostrar_slot,64);
+    key_register(mostrar_slot,65);
+    key_register(mostrar_slot,66);
+    key_register(mostrar_slot,67);
+    key_register(mostrar_slot,68);
+    key_register(mostrar_slot,69);
+    key_register(mostrar_slot,70);
+    
+    
+    
+    
     kprint("binding keys done\n");
     if(tty_init(&tty_kernel, menu_in)){
         panic("fallo  el inicio de las tty");
@@ -150,32 +169,7 @@ void kmain(multiboot_info_t* mbd, unsigned int magic ){
 	//Iniciamos Scheduler
 	iniciar_scheduler();
 
-#if 0
-	/* Ejecutamos TODOS los módulos */
-	if ( mbd->flags & 8 ) {
-		module_t *mod;
-		unsigned long i;
-		for ( i = 0, mod = (module_t *) PA2KVA(mbd->mods_addr);
-			i < mbd->mods_count;
-			i++, mod++ )
-			{
-				programs_t *p = (programs_t *) mod->mod_start;
-				if ( *((uint32_t *)p->magic) != 0x00455845 ) continue;
-				crear_tarea( (programs_t *) mod->mod_start, i );
-			}
-	}
-#endif
-#if 0
-	programs_t p1, p2, p3;
 
-	p1.va_entry = pruebatarea;
-	p2.va_entry = pruebatarea2;
-	p3.va_entry = pruebatarea3;
-
-	crear_kthread( &p1, 0 );
-	crear_kthread( &p2, 1 );
-	crear_kthread( &p3, 2 );
-#endif
 	extern unsigned char ej1[];
 	extern unsigned char ej2[];
 	programs_t *p1 = (programs_t *) ej1;
@@ -188,7 +182,6 @@ void kmain(multiboot_info_t* mbd, unsigned int magic ){
     menu(1);
 	sti();
     //Lanzamos programa menu
-	
-	for (;;) __asm__ __volatile__ ( "hlt" );
+	while(1);
 }
 

@@ -9,7 +9,7 @@
 #include <drivers/keyboard.h>
 
 #define offset_gdt_tareas 10
-#define tam_buffer_pantalla 8000
+#define tam_buffer_pantalla 80*25*2
 #define quantum_default 18;
 
 typedef struct {
@@ -28,8 +28,6 @@ tarea tareas[10];					//Se almacena informacion referente a cada caterea
 char tarea_activa;					//Numero de tarea en ejecucion (0-9), para no tarea -1
 char tarea_en_pantalla;				//Numero de tarea mostrada por pantalla (0-9), para no tarea -1      
 char contador_actualizar_pantalla;	//Contador que sirve para actualizar buffer de pantalla
-
-
 
 
 //Funcion que muestra menu

@@ -91,7 +91,7 @@ void matar_tarea(char numero_tarea){
 void mostrar_slot(key s){
 	//Funcion que pasa del buffer de pantalla de la tarea que se quiere mostrar, a la pantalla
 	char * b_pantalla;
-	b_pantalla = (char *) 0xb8000L;
+	b_pantalla = (char *) 0x800b8000;
 	for(unsigned int a=0; a< tam_buffer_pantalla; ++a) {
 		b_pantalla[a]= (tareas[s]).pantalla[a];
 	}
@@ -315,9 +315,11 @@ void crear_tarea( programs_t *programa, char id ) {
 //Pido pagina para buffer mapeado en kernel, la pido con mmu_alloc para tener tambien la fisica
 	uint32_t virtual_video_kernel;
 	uint32_t fisica_video_kernel;
-	if ((mmu_alloc( (pde_t *) PA2KVA(getCR3()), &virtual_video_kernel, &fisica_video_kernel, 2 ))== E_MMU_NO_MEMORY) kprint("Error pedir pag buffer video nueva tarea");
+	
+	mmu_kalloc( &virtual_video_kernel); //Esto me devuelve la direccion virtual donde mapeo el kernel el buffer fisico
+	fisica_video_kernel = KVA2PA(virtual_video_kernel);
 	if( (mmu_map_pa2va( (pde_t *) pdt_va, fisica_video_kernel,0xb8000,PAGE_USER,1))!=E_MMU_SUCCESS) kprint("Error mmu_map_pa2va");
-
+	tareas[id].pantalla = virtual_video_kernel;
 
 	unmask_ints(flags);
 	
