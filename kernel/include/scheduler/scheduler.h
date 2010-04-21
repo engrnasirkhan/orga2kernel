@@ -28,7 +28,7 @@ tarea tareas[10];					//Se almacena informacion referente a cada caterea
 char tarea_activa;					//Numero de tarea en ejecucion (0-9), para no tarea -1
 char tarea_en_pantalla;				//Numero de tarea mostrada por pantalla (0-9), para no tarea -1      
 char contador_actualizar_pantalla;	//Contador que sirve para actualizar buffer de pantalla
-
+programs_t* programas[5];
 
 //Funcion que muestra menu
 void menu(key s);
