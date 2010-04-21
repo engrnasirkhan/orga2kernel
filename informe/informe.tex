@@ -9,10 +9,60 @@
 
 
 \begin{document}
+ 
+\title{
+	\mbox{\Huge Universidad de Buenos Aires}\\
+	\mbox{\huge Facultad de Ciencias Exactas y Naturales}\\
+	\vspace{20mm}
+	\mbox{\textbf{Trabajo Pr\'actico Final}}\\
+	\mbox{\textbf{Organización del Computador II}}\\
+	\mbox{\textbf{Nombre del SO}}\\
+	\vspace{8mm}
+}
+\author{\Large\textbf{Profesor:} Ing. Alejandro Furfaro}
+\date{}
+\maketitle \thispagestyle{empty}
 
-\tableofcontents
+\begin{center}
+    \vspace{15mm}
+    \textbf{Integrantes}\\
+
+    \begin{tabular}{|l|l|l|}
+        \hline
+        \textit{Apellido y Nombre} & \textit{L.U.} & \textit{Mail} \\
+        \hline
+		Aguerre, Ezequiel & 246/07 & ezeaguerre@gmail.com \\
+        \hline
+		Carrillo, Facundo & 693/07 & facu.zeta@gmail.com \\
+	    \hline
+		Pivetta, Santiago & N/N & santiago.pivetta@gmail.com \\
+        \hline
+		Semelman, Mariano & N/N & noinflection@gmail.com \\
+        \hline
+    \end{tabular}
+\end{center}
+
+
+\begin{center}
+    \vspace{10mm}
+    \textbf{Abstract:}\\    
+   En este proyecto emprendemos el arduo trabajo de implementar un Sistema operativo basado en tecnología Intel.
+    \vspace{5mm}
+\end{center}
+
+\begin{center}
+    \vspace{5mm}
+    \textbf{Palabras Clave:}\\
+		Programación dinámica, dividir y conquistar, backtracking.
+    \vspace{5mm}
+\end{center}
+
+
 
 \newpage
+\tableofcontents
+\newpage
+
 
 
 \section*{Introducci\'on}
@@ -196,6 +246,7 @@ Contamos con las siguientes variables globales:
       char tarea_activa;	
       char tarea_en_pantalla;
       char contador_actualizar_pantalla;
+      programs_t* programas[5];
 \end{verbatim}
 
 
@@ -252,4 +303,6 @@ void crear_tarea(programs programa, char numero_tarea){
 \addcontentsline{toc}{section}{C\'omo usar el SO}
 Para ir al menu se debe presionar la tecla Esc. Ahi mismo podra ingresar todo lo que el menu lo ofrece mediante las instruciones detalladas.
 Con las teclas F1, F2,...,F10 podra moverse entre las tareas que tiene en ejecución.
+
+
 \end{document}
