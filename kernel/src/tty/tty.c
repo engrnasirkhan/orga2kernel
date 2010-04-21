@@ -157,7 +157,7 @@ bool tty_get_key(tty_t* tty){
 
 bool tty_get_string(tty_t* tty){
     if(tty_tty_actual->expects_string){
-        return true;
+	      return true;
     }
     tty_tty_actual->expects_string = true;
     return false;

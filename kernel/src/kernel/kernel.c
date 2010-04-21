@@ -155,11 +155,15 @@ void kmain(multiboot_info_t* mbd, unsigned int magic ){
 
 	extern unsigned char ej1[];
 	extern unsigned char ej2[];
-	programs_t *p1 = (programs_t *) ej1;
-	programs_t *p2 = (programs_t *) ej2;
-	crear_tarea( p1, 0 );
-	crear_tarea( p2, 1 );
-	crear_tarea( p2, 2 );
+	programas[0] = (programs_t *) ej1;
+	programas[1]= (programs_t *) ej2;
+	programas[2] = (programs_t *) ej1;
+	programas[3]= (programs_t *) ej1;
+	programas[4]= (programs_t *) ej1;
+	
+	//crear_tarea( programas[0], 0 );
+	//crear_tarea( programas[1], 1 );
+//	crear_tarea( programas[0], 2 );
 
 	set_irq_handler( 0, &timer );
 	set_irq_handler( 1, &irq_keyboard );
