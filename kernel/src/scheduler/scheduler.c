@@ -23,18 +23,71 @@ void menu(key s){
 	//__asm__ __volatile__ ("xchg %bx,%bx");
     kclrscreen();
     kprint("Menu miOS: Como operar \n \n \n \n");
-    kprint("- Para cargar programa: cargar letra_de_programa numero_de_slot (1-10).\n");
-    kprint("        ej:  cargar 4  Para cargar programa en slot 4 \n \n");
+    kprint("- Para cargar programa: cargar letra_de_programa numero_de_slot (1-10) Tenemos 5 progras distintos (a,b,c,d,e).\n");
+    kprint("        ej:  cargar a 4  (cargar programa  a  en slot 4)    \n \n");
     kprint("- Para matar un programa: matar numero_de_slot \n");
-    kprint("        ej:  matar 5 \n \n");
-    kprint("- Para cambiar quantum: quantum numero_de_slot valor(1-20) \n");
-    kprint("        ej:  quantum numero_de_slot 13 \n \n \n\n \n \n \n \n");
+    kprint("        ej:  matar 5  (mata el programa que corria en slot 5) \n \n");
+    kprint("- Para cambiar quantum: quantum numero_de_slot valor(0-9) \n");
+    kprint("        ej:  quantum 3 2 (cambia el quantum del programa que corre en slot 3 a 2\n \n \n\n \n \n \n \n");
     tty_get_string(&tty_kernel);
+    
+   ///NOTA: cuando se refiern al slot i para nosotros es la tarea i-1
 }
 void menu_in(uint8_t* c) {
-    kprint("FUNCION QUE PARSEA LA ENTRADA Y DECIDE QUE HACER(SCHEDULER.C)\n");
-	 kprint( "Cadena: %s\n", tty_tty_find(&tty_kernel)->buff );
-    tty_get_string(&tty_kernel);
+		//kprint("FUNCION QUE PARSEA LA ENTRADA Y DECIDE QUE HACER(SCHEDULER.C)\n");
+		tty_get_string(&tty_kernel);
+
+uint8_t *entrada = (tty_tty_find(&tty_kernel)->buff);
+
+uint8_t modo=3;
+uint8_t letra_tarea;
+uint8_t numero_slot;
+uint8_t quantum;
+//cargar => modo=0
+//matar =>  modo=1
+//quantum => modo=2
+
+if( entrada[0]=='c' && entrada[1]=='a' && entrada[2]=='r' && entrada[3]=='g' && entrada[4]=='a'&& entrada[5]=='r')	modo=0;
+if( entrada[0]=='m' && entrada[1]=='a' && entrada[2]=='t' && entrada[3]=='a' && entrada[4]=='r') modo=1;
+if( entrada[0]=='q' && entrada[1]=='u' && entrada[2]=='a' && entrada[3]=='n' && entrada[4]=='t' && entrada[5]=='u' && entrada[6]=='m' )	modo=2;
+
+
+if(modo==0){
+	letra_tarea= entrada[7];
+	numero_slot= entrada[9];	
+	crear_tarea( programas[ letra_tarea - 'a'], numero_slot);
+	kprint("Cargo el programa ");
+	kprint((char) letra_tarea);
+	kprint(" en el slot ");
+	kprint("%i \n", numero_slot);
+	crear_tarea( programas[ letra_tarea - 'a'], numero_slot);
+}
+
+if(modo==1){
+	numero_slot= entrada[6];	 
+	matar_tarea(numero_slot-1);
+	kprint("Mato la tarea del slot ");
+	kprint("%i \n", numero_slot);
+}
+
+if(modo==2){
+	numero_slot= entrada[8];	
+	quantum= entrada[10];	
+	if( 0< quantum && quantum <21){
+		 tareas[numero_slot-1].quantum_fijo = (int) quantum;
+	kprint("Cambio el quantum del slot ");
+	kprint(numero_slot);
+	kprint(" al valor ");
+	kprint("%i \n",quantum);
+}
+	else kprint("Quantum invalido\n");
+
+}
+if(!( modo==2 || modo==1|| modo==0))kprint("Ingreso algo mal\n");
+
+
+
+		
 }
 
 //Funcion de scheduler
