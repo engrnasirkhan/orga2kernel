@@ -3,7 +3,14 @@
 void *memset( void *s, int c, size_t n ) {
 	char *d = s;
 	if ( !s ) return s;
-	
+
+	if ( s == (void *) 0x88000000 ) {
+		uint32_t *ebp;
+		__asm__ __volatile__ ( "movl %%ebp, %0" : "=rm"(ebp) );
+		kprint ( "eip anterior: 0x%x\n", *(ebp+4) );
+		stacktrace(0, 5);
+	}
+
 	while ( n-- ) *d++ = (char) c;
 
 	return s;

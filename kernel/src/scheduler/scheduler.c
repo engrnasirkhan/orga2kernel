@@ -54,25 +54,24 @@ if( entrada[0]=='q' && entrada[1]=='u' && entrada[2]=='a' && entrada[3]=='n' && 
 
 if(modo==0){
 	letra_tarea= entrada[7];
-	numero_slot= entrada[9];	
+	numero_slot= entrada[9] - '1';	
 	crear_tarea( programas[ letra_tarea - 'a'], numero_slot);
 	kprint("Cargo el programa ");
 	kprint((char) letra_tarea);
 	kprint(" en el slot ");
-	kprint("%i \n", numero_slot);
-	crear_tarea( programas[ letra_tarea - 'a'], numero_slot);
+	kprint("%i \n", numero_slot + 1);
 }
 
 if(modo==1){
-	numero_slot= entrada[6];	 
+	numero_slot= entrada[6] - '0';	 
 	matar_tarea(numero_slot-1);
 	kprint("Mato la tarea del slot ");
 	kprint("%i \n", numero_slot);
 }
 
 if(modo==2){
-	numero_slot= entrada[8];	
-	quantum= entrada[10];	
+	numero_slot= entrada[8] - '0';	
+	quantum= entrada[10] - '0';	
 	if( 0< quantum && quantum <21){
 		 tareas[numero_slot-1].quantum_fijo = (int) quantum;
 	kprint("Cambio el quantum del slot ");
@@ -93,6 +92,7 @@ if(!( modo==2 || modo==1|| modo==0))kprint("Ingreso algo mal\n");
 //Funcion de scheduler
 void scheduler(){	
 	uint32_t i;
+	uint32_t tarea_anterior = tarea_activa;
 	//Paso a la siguiente potencialmente ejecutable tarea
 	for ( i = 0; i < 10; i++ ) {
 		tarea_activa = (tarea_activa + 1) % 10;
@@ -102,6 +102,8 @@ void scheduler(){
 		tarea_activa = -1;
 		return;
 	}
+
+	if ( tarea_activa == tarea_anterior ) return;
 	
 	//Chequeo indice en la gdt de la proxima tarea a ejecutar
 	char gdt_indice = offset_gdt_tareas + tarea_activa;
@@ -260,6 +262,11 @@ void crear_tarea( programs_t *programa, char id ) {
 	struct tss *nueva_tss;
 
 	if ( !programa || id < 0 ) return;
+
+	if ( strncmp( programa->magic, "EXE", 4 ) ) {
+		kprint( "No es un ejecutable reconocido.\n" );
+		return;
+	}
 
 	/* ¿Es una tarea del kernel o del usuario? */
 	if ( (uint32_t) programa->va_entry >= KERNEL_MEMMAP )

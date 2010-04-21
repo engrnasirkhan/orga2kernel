@@ -59,7 +59,7 @@ void dumpregs_regs( struct registers *r ) {
 
 void stacktrace( int saltar, int cuantas ) {
 	reg_t *ebp;
-	__asm__ __volatile__ ( "movl %%esp, %0" : "=rm"(ebp) );
+	__asm__ __volatile__ ( "movl %%ebp, %0" : "=rm"(ebp) );
 
 	while ( saltar-- ) ebp = (reg_t *) *ebp;
 
