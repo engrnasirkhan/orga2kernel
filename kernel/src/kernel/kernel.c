@@ -107,22 +107,6 @@ int pf( struct registers *r ) {
 
 void pruebatarea()  { for (;;) kprint("HOLA"); }
 void pruebatarea2() { for (;;) kprint("chau"); }
-void pruebatarea3() {
-	const char *str = "TaReA 3";
-	int size = 8;
-	for (;;) {
-		__asm__ __volatile__ (
-			"movl $1, %%eax\n\t"
-			"movl $1, %%ebx\n\t"
-			"movl %0, %%ecx\n\t"
-			"movl %1, %%edx\n\t"
-			"int $0x80"
-			: : "rm"(str), "rm"(size)
-			: "eax", "ebx", "ecx", "edx"
-		);
-	}
-}
-
 
 void kmain(multiboot_info_t*, unsigned int magic ) __noreturn;
 void kmain(multiboot_info_t* mbd, unsigned int magic ){
@@ -169,14 +153,14 @@ void kmain(multiboot_info_t* mbd, unsigned int magic ){
 	//Iniciamos Scheduler
 	iniciar_scheduler();
 
-
 	extern unsigned char ej1[];
 	extern unsigned char ej2[];
 	programs_t *p1 = (programs_t *) ej1;
 	programs_t *p2 = (programs_t *) ej2;
 	crear_tarea( p1, 0 );
 	crear_tarea( p2, 1 );
-    
+	crear_tarea( p2, 2 );
+
 	set_irq_handler( 0, &timer );
 	set_irq_handler( 1, &irq_keyboard );
     menu(1);

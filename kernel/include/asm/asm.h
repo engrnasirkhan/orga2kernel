@@ -62,7 +62,7 @@ extern void io_wait();
 
 static inline uint8_t inb( uint16_t port ) {
 	uint8_t res;
-	__asm__ __volatile__ ( "inb %%dx, %%al" : "=al"(res) : "dx"(port) );
+	__asm__ __volatile__ ( "inb %%dx, %%al" : "=a"(res) : "d"(port) );
 	return res;
 }
 

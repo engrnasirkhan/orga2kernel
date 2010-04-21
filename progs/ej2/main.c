@@ -3,7 +3,11 @@
 #include <string.h>
 #include <time.h>
 
+static int contador;
+
 int main( const char *argv ) {
-	for (;;) puts( "Proceso 2" );
+	for (;;) {
+		printf ( "Proceso 2: %d\n", contador++ );
+	}
 	return 0;
 }

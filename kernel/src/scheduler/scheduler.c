@@ -192,8 +192,6 @@ void crear_kthread( programs_t *programa, char id ) {
  * @param[in] id Indica el número de slot a utilizar por la tarea.
  */
 void crear_tarea( programs_t *programa, char id ) {
-	cli() 
-	
 	reg_t flags;
 	uint32_t pdt_va, pdt_pa;
 	uint32_t tss_va;
@@ -265,11 +263,23 @@ void crear_tarea( programs_t *programa, char id ) {
 		va += PAGE_SIZE;
 	}
 
+	// Pido pagina para buffer mapeado en kernel, la pido con mmu_alloc para tener tambien la fisica
+	uint32_t virtual_video_kernel;
+	if ( mmu_kalloc( &virtual_video_kernel ) != E_MMU_SUCCESS ) {
+		kprint( "Error al pedir buffer de video.\n" );
+		return;
+	}
+	if ( mmu_map_pa2va( (pde_t *) pdt_va, KVA2PA( virtual_video_kernel ), 0xb8000, PAGE_USER | PAGE_RW | PAGE_PRESENT, 0 ) != E_MMU_SUCCESS ) {
+		kprint( "Error al mapear buffer de video.\n" );
+		return;
+	}
+
 	/* Ahora que mapeamos las páginas de datos y de BSS hay que rellenarlas */
 	oldcr3 = getCR3();
 	setCR3( pdt_pa );
 	memcpy( (void *) programa->va_data, (void *) PA2KVA(pa), programa->va_bss - programa->va_data );
 	memset( (void *) programa->va_bss, 0, programa->va_bssend - programa->va_bss );
+	memset( (void *) 0xB8000L, 0, 80 * 25 * 2 );
 	setCR3( oldcr3 );
 
 	/* Ahora pedimos un espacio cualquiera para la pila de usuario. */
@@ -307,21 +317,10 @@ void crear_tarea( programs_t *programa, char id ) {
 	tareas[id].pa_tss = (void *) KVA2PA(tss_va);
 	tareas[id].quantum_fijo = quantum_default;
 	tareas[id].quantum_actual = 0;
+	tareas[id].pantalla = virtual_video_kernel;
 
 	/* Ya mapeamos todo, ahora construimos la TSS :-) */
 	gdt_fill_tss_segment( g_GDT + id + offset_gdt_tareas, (void *) tss_va, 0x67, 0 );
 
-
-//Pido pagina para buffer mapeado en kernel, la pido con mmu_alloc para tener tambien la fisica
-	uint32_t virtual_video_kernel;
-	uint32_t fisica_video_kernel;
-	
-	mmu_kalloc( &virtual_video_kernel); //Esto me devuelve la direccion virtual donde mapeo el kernel el buffer fisico
-	fisica_video_kernel = KVA2PA(virtual_video_kernel);
-	if( (mmu_map_pa2va( (pde_t *) pdt_va, fisica_video_kernel,0xb8000,PAGE_USER,1))!=E_MMU_SUCCESS) kprint("Error mmu_map_pa2va");
-	tareas[id].pantalla = virtual_video_kernel;
-
 	unmask_ints(flags);
-	
-	sti();
 }
