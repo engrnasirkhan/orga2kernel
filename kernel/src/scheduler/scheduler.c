@@ -89,9 +89,10 @@ if(modo==1){
 	//matar
 	numero_slot= entrada[6] - '0';	 
 	if(tareas[numero_slot].hay_tarea) {
-		matar_tarea(numero_slot);
 		kprint("Mato la tarea del slot ");
-		kprint("%i \n", numero_slot+ '0');
+		kprint("%i \n", numero_slot);
+		matar_tarea(numero_slot);
+	
 	
 	}
 }
@@ -173,6 +174,7 @@ static void matar_tarea_nosched(char numero_tarea){
 void matar_tarea( char numero_tarea ) {
 	reg_t flags;
 	mask_ints(flags);
+	//__asm__ __volatile__ ("xchg %bx,%bx" );
 	matar_tarea_nosched( numero_tarea );
 	/* No podemos volver a la tarea que ya no existe :-( */
 	if (tarea_activa == numero_tarea) {
