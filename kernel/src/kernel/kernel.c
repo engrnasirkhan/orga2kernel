@@ -86,9 +86,7 @@ int timer( struct registers *r ) {
 }
 
 static void idletask() {
-	for (;;) {
-		hlt();
-	}
+	while(1);
 }
 
 static int pf( struct registers *r ) {
