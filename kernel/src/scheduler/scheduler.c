@@ -382,7 +382,7 @@ void crear_tarea( programs_t *programa, char id ) {
 	tareas[id].pa_tss = (void *) KVA2PA(tss_va);
 	tareas[id].quantum_fijo = quantum_default;
 	tareas[id].quantum_actual = 0;
-	tareas[id].pantalla = virtual_video_kernel;
+	tareas[id].pantalla = (char *) virtual_video_kernel;
 
 	/* Ya mapeamos todo, ahora construimos la TSS :-) */
 	gdt_fill_tss_segment( g_GDT + id + offset_gdt_tareas, (void *) tss_va, 0x67, 0 );

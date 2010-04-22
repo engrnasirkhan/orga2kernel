@@ -151,9 +151,10 @@ void kmain(multiboot_info_t* mbd, unsigned int magic ){
 
 	extern unsigned char ej1[];
 	extern unsigned char ej2[];
+	extern unsigned char ej3[];
 	programas[0] = (programs_t *) ej1;
 	programas[1]= (programs_t *) ej2;
-	programas[2] = (programs_t *) ej1;
+	programas[2] = (programs_t *) ej3;
 	programas[3]= (programs_t *) ej1;
 	programas[4]= (programs_t *) ej1;
 	
