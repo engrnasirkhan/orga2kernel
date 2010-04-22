@@ -42,6 +42,7 @@ int sys_getpid() {
 }
 
 int sys_exit( struct registers *r ) {
+	cli();
 	matar_tarea( tarea_activa );
 	panic_regs( r, "Falló sys_exit!!" );
 	return 0; /* No retorna!! */
