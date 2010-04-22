@@ -45,7 +45,7 @@ int sys_write( struct registers *r ) {
  * y la otra cuando volvemos al despachador de interrupciones.
  */
 int timer( struct registers *r ) {
-	#define TIEMPO_ACTUALIZCION 250  //Totalmente arbitrario
+	#define TIEMPO_ACTUALIZCION 10  //Totalmente arbitrario
 	if (tarea_activa == -1) {
 		pic8259A_send_EOI( r->nro );
 		scheduler();
@@ -53,10 +53,9 @@ int timer( struct registers *r ) {
 		
 	//Referente a la actualizacion de pantalla activa
 	++contador_actualizar_pantalla;
-	if(contador_actualizar_pantalla == TIEMPO_ACTUALIZCION) { 
-		contador_actualizar_pantalla == 0;
-		if( tarea_en_pantalla == -1 ) menu(0);
-		else mostrar_slot(tarea_en_pantalla);
+	if(contador_actualizar_pantalla > TIEMPO_ACTUALIZCION) { 
+		contador_actualizar_pantalla = 0;
+		if( tarea_en_pantalla != -1 )mostrar_slot(tarea_en_pantalla+1);
 	}
 	
 	
@@ -165,14 +164,11 @@ void kmain(multiboot_info_t* mbd, unsigned int magic ){
 	programas[3]= (programs_t *) ej1;
 	programas[4]= (programs_t *) ej1;
 	
-	//crear_tarea( programas[0], 0 );
-	//crear_tarea( programas[1], 1 );
-//	crear_tarea( programas[0], 2 );
-	prueba(10);
+
 
 	set_irq_handler( 0, &timer );
 	set_irq_handler( 1, &irq_keyboard );
-   // menu(1);
+menu(1);
 	sti();
     //Lanzamos programa menu
 	while(1);

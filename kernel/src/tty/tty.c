@@ -63,8 +63,8 @@ void tty_put_key(key tecla){
             }
         } else {
             isChar = false;
-            kprint("Usted apreto la tecla numero: %d\n", tecla);
-            kprint("tecla desconocida, se agradece si usted la agrega\n");
+        //    kprint("Usted apreto la tecla numero: %d\n", tecla);
+         //   kprint("tecla desconocida, se agradece si usted la agrega\n");
         }
         
         if(tty_tty_actual->buff_pos == MAX_TTY){

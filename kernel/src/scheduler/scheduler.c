@@ -20,6 +20,7 @@ extern tty_t tty_kernel;
 
 //Funcion que muestra menu y parsea los comandos.
 void menu(key s){
+	if (s) tarea_en_pantalla = -1;
 	//__asm__ __volatile__ ("xchg %bx,%bx");
     kclrscreen();
     kprint("Menu miOS: Como operar \n \n \n \n");
@@ -148,7 +149,8 @@ void matar_tarea(char numero_tarea){
 
 //Funcion para mostrar un slot en particular
 void mostrar_slot(key s){
-if( tareas[s-59].hay_tarea) memcpy( (void *) 0x800b8000, ( void * ) tareas[s-59].pantalla, 80 * 25 * 2 );
+tarea_en_pantalla= s-1;
+if( tareas[s-58].hay_tarea) memcpy( (void *) 0x800b8000, ( void * ) tareas[s-58].pantalla, 80 * 25 * 2 );
 else menu(1);
 
 }
