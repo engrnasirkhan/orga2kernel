@@ -58,11 +58,8 @@ if(modo==0){
 	
 	letra_tarea= entrada[7];
 	numero_slot= entrada[9] - '0';	
+	kprint( "Cargando el programa %c en el slot %d\n", letra_tarea, numero_slot );
 	crear_tarea( programas[ letra_tarea - 'a'], numero_slot);
-	kprint("Cargo el programa ");
-	kprint((char) letra_tarea);
-	kprint(" en el slot ");
-	kprint("%i \n", numero_slot );
 }
 
 if(modo==1){
@@ -82,12 +79,8 @@ if(modo==2){
 	quantum= entrada[10] - '0';	
 	if( 0< quantum && quantum <21){
 		 tareas[numero_slot].quantum_fijo = (int) quantum;
-	kprint("Cambio el quantum del slot ");
-	kprint(numero_slot);
-	kprint(" al valor ");
-	kprint("%i \n",quantum);
-}
-	else kprint("Quantum invalido\n");
+		kprint( "Cambio el quantum del slot %d al valor %d\n", numero_slot, quantum );
+	} else kprint("Quantum invalido\n");
 
 }
 if(!( modo==2 || modo==1|| modo==0))kprint("Ingreso algo mal\n");

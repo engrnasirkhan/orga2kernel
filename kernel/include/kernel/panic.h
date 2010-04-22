@@ -4,6 +4,7 @@
 #include <asm/types.h>
 
 void panic( const char *fmt, ... );
+void panic_regs( struct registers *r, const char *fmt, ... );
 void debug( const char *fmt, ... );
 void dumpregs();
 void dumpregs_regs( struct registers *r );

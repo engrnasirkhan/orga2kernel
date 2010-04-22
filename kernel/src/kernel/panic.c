@@ -15,6 +15,13 @@ void panic( const char *fmt, ... ) {
 	cli(); for(;;) hlt();
 }
 
+void panic_regs( struct registers *r, const char *fmt, ... ) {
+	debug(fmt);
+	dumpregs_regs(r);
+	stacktrace(2,10);
+	cli(); for(;;) hlt();
+}
+
 void dumpregs() {
 	struct registers regs;
 

@@ -1,7 +1,7 @@
 #include <asm/gdt.h>
 #include <screen/screen.h>
 
-struct GDTEntry g_GDT[16] __attribute__ ((aligned (16)));
+struct GDTEntry g_GDT[24] __attribute__ ((aligned (16)));
 
 void gdt_fill_code_segment( struct GDTEntry *gdt, void *base, unsigned long limit, unsigned char dpl ) {
 	gdt_set_base( gdt, (unsigned long) base );

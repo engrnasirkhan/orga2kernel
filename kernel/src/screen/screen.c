@@ -100,6 +100,12 @@ int kprint(const uint8_t *format, ...)
                     char_count++;
                 }
             }
+				else if(c=='c')
+				{
+					char c = va_arg( ap, int );
+					kputc(c);
+					char_count++;
+				}
         }
     }
 	 va_end( ap );

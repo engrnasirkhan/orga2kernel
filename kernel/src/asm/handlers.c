@@ -101,8 +101,8 @@ void isr_dispatch_routine( struct registers regs ) {
 	};
 	if ( !g_ISRS[ regs.nro ] ) {
 		if ( regs.nro > 19 )
-			panic( "Intel Reserved Exception %d", regs.nro );
-		panic( isr_name[ regs.nro ] );
+			panic_regs( &regs, "Intel Reserved Exception %d", regs.nro );
+		panic_regs( &regs, isr_name[ regs.nro ] );
 	}
 
 	(*g_ISRS[ regs.nro ])( &regs ); 

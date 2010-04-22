@@ -5,9 +5,8 @@
 #include <asm/idt.h>
 #include <asm/gdt.h>
 
-
 /** Espacio para 15 entradas GDT + descriptor nulo. */
-extern struct GDTEntry g_GDT[16];
+extern struct GDTEntry g_GDT[24];
 
 /** Espacio para 256 interrupciones */
 extern struct IDTEntry g_IDT[256];
