@@ -3,8 +3,11 @@
 
 #include <asm/types.h>
 
-#define SYSCALL_WRITE 1
-#define NR_SYSCALLS 2
+#define SYSCALL_EXIT   0
+#define SYSCALL_WRITE  1
+#define SYSCALL_GETPID 2
+
+#define NR_SYSCALLS    3
 
 /**
  * @file syscalls.h
@@ -33,5 +36,7 @@ extern void syscall_entry();
 extern handler_t syscall_table[];
 
 extern int sys_write( struct registers * );
+extern int sys_getpid();
+extern int sys_exit( struct registers * );
 
 #endif

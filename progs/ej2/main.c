@@ -5,9 +5,11 @@
 
 static int contador;
 
-int main( const char *argv ) {
-	for (;;) {
-		printf ( "Proceso 2: %d\n", contador++ );
+void main() {
+	int pid = getpid();
+	for ( ; contador < 20000; contador++ ) {
+		printf ( "Proceso %d: %d\n", pid, contador );
 	}
+	exit( 0 );
 	return 0;
 }

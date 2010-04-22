@@ -3,17 +3,6 @@
 #include <string.h>
 #include <types.h>
 
-void exit( int code ) {
-	// De momento generamos una excepción.
-	for ( ;; ) {
-		__asm__ __volatile__ (
-			"cli\n\t"
-			"hlt\n\t"
-		);
-	}
-}
-
-
 static int last_random;
 int rand() {
 	last_random = 1103515245 * last_random + 12345;

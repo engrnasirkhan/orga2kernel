@@ -7,6 +7,8 @@
 #include <kernel/globals.h>
 #include <kernel/panic.h>
 #include <drivers/pic8259A.h>
+#include <scheduler/scheduler.h>
+#include <mem/memlayout.h>
 
 handler_t g_ISRS[32];
 handler_t g_IRQS[16];
@@ -102,6 +104,10 @@ void isr_dispatch_routine( struct registers regs ) {
 	if ( !g_ISRS[ regs.nro ] ) {
 		if ( regs.nro > 19 )
 			panic_regs( &regs, "Intel Reserved Exception %d", regs.nro );
+		if ( regs.cs == USER_CS ) {
+			kprint( "%s, matando tarea %d.\n", isr_name[regs.nro], tarea_activa );
+			matar_tarea( tarea_activa );
+		}
 		panic_regs( &regs, isr_name[ regs.nro ] );
 	}
 

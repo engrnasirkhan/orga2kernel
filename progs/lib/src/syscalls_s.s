@@ -12,3 +12,17 @@
 #	int $0x80
 #	popl %ebx
 #	ret
+
+.global getpid
+getpid:
+	movl $2, %eax
+	int $0x80
+	ret
+
+.global exit
+exit:
+	xorl %eax, %eax
+	int $0x80
+	# Excepción si falla.
+	cli
+	hlt

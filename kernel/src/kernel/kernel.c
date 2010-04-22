@@ -37,6 +37,16 @@ int sys_write( struct registers *r ) {
 	return ARG3(r);
 }
 
+int sys_getpid() {
+	return tarea_activa;
+}
+
+int sys_exit( struct registers *r ) {
+	matar_tarea( tarea_activa );
+	panic_regs( r, "Falló sys_exit!!" );
+	return 0; /* No retorna!! */
+}
+
 /* Nota, hay que mandarle el EOI al PIC porque scheduler() NO vuelve,
  * Si no le mandamos el EOI nosotros no se lo manda nadie.
  * Además, hay que mandarle el EOI antes de hacer el cambio de contexto,

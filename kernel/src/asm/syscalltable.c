@@ -2,6 +2,7 @@
 #include <asm/syscalls.h>
 
 handler_t syscall_table[] = {
-	NULL, /* 0 */
-	sys_write /* 1 */
+	sys_exit, /* 0 */
+	sys_write, /* 1 */
+	sys_getpid /* 2 */
 };

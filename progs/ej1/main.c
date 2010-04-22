@@ -4,7 +4,10 @@
 #include <time.h>
 
 void main() {
-	for (;;) puts( "Proceso 1" );
+	int pid = getpid();
+	int i;
+	for ( i = 0; ; i++ )
+		printf( "Proceso %d: %d.               \r", pid, i );
 }
 
 /*

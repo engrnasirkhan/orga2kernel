@@ -2,7 +2,7 @@
 #include <screen/screen.h>
 #include <drivers/keyboard.h>
 #include <tty/tty.h>
-#include <mem/vmm.h>
+#include <mem/mmu.h>
 #include <kernel/panic.h>
 #include <drivers/keyboard.h>
 
