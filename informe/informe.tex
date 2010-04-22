@@ -66,10 +66,18 @@
 
 
 
-\section*{Introducci\'on}
+\section{Introducci\'on}
 %\addcontentsline{toc}{section}{Introducci\'on}
 El siguiente trabajo tiene como fin aplicar los conocimientos adquiridos en Organización del Computador II, Dpto de Computación, Facultad de Ciencias Exactas y Naturales, Universidad de Buenos Aires.	El proyecto incluye la creacion de un "Sistema Operativo" programado en el lenguaje C y Assembler IA32.
+\\
+\\
+\begin{figure}[H]
+\centering
+\subfloat{\includegraphics[width=0.25\textwidth]{imagenes/capas.png}}
+\caption{Diagrama de capas.}
+\end{figure}
 
+El diseño del sistema esta bastante influenciado por \emph{Understanding The Linux Kernel, 3rd Edition}. Propone un sistema de segmentación flat, paginación y multi task.
 
 \newpage
 \section{Organizaci\'on del C\'odigo Fuente}
@@ -100,11 +108,11 @@ A continuacion se presenta la jerarquia del codigo fuente.
 \input{mmu.tex}
 
 \newpage
-\section{Interrupciones}
 
 \section{Scheduler}
 
-Para la realizaci\'on del Scheduler se implement\'o una pol\'itica de Round Robin. Cada tarea tiene un quantum variable que se gasta cada 1 milisegundo y al terminar este se pasa a la ejecuci\'on de la siguiente tarea.
+Para la realizaci\'on del Scheduler se implement\'o una pol\'itica de Round Robin. Cada tarea tiene un quantum variable que se gasta cada 1 timertick y al terminar éste se pasa a la ejecuci\'on de la siguiente tarea.
+Se uso fuertemente en este la funcionalidad del mmu, por lo cual se serializo el trabajo.
 
 Toda la funcionalidad del Scheduler se encuentra en tres archivos:
 \begin{itemize}
