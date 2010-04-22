@@ -121,7 +121,9 @@ int tty_tty_change(tty_t* tty_number){
 
 /** agrega una tty , recibe como entrada tty_buffer_out*/
 int tty_tty_add(tty_t* tty, tty_buffer_out_f out_f){
-    struct tty_tty_node * node = kmalloc(sizeof(struct tty_tty_node));
+    struct tty_tty_node * node;
+	 mmu_kalloc( &node );
+	 //kmalloc(sizeof(struct tty_tty_node));
     if(node == NULL){
         //si fallo malloc
         kprint("fallo kmalloc\n");

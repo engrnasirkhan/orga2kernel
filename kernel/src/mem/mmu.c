@@ -692,8 +692,10 @@ static void mmu_install_gdt()
 uint8_t mmu_install_task_pdt(uint32_t *va, uint32_t *pa)
 {
     uint32_t task_pdt_va, task_pdt_pa;
-    if(mmu_alloc(kernel_pdt, &task_pdt_va, &task_pdt_pa, PAGE_SUPERVISOR|PAGE_PRESENT|PAGE_RW)==E_MMU_SUCCESS)
+    //if(mmu_alloc(kernel_pdt, &task_pdt_va, &task_pdt_pa, PAGE_SUPERVISOR|PAGE_PRESENT|PAGE_RW)==E_MMU_SUCCESS)
+	 if ( mmu_kalloc( &task_pdt_va ) == E_MMU_SUCCESS )
     { 
+	 	task_pdt_pa = KVA2PA(task_pdt_va);
         pde_t *pdt = (pde_t*) task_pdt_va;
         memset(pdt, 0, PAGE_SIZE);
         

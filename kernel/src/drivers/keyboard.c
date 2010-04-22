@@ -17,7 +17,8 @@ int key_register(key_handler_t funcion, key clave){
         node->handler = funcion;
     } else {
         int tamanio = sizeof(key_handler_node_t);
-        key_handler_node_t *nuevo = (key_handler_node_t*)kmalloc(tamanio);
+        key_handler_node_t *nuevo; // = (key_handler_node_t*)kmalloc(tamanio);
+		  mmu_kalloc( &nuevo );
         if(nuevo == NULL){
             return 1;
         }
