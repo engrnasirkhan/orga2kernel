@@ -2,34 +2,30 @@
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
+#include <unistd.h>
+
+void cuadrado( int x, int y, int ancho, int alto, int color ) {
+	static unsigned short *video = (unsigned short *) 0xb8000;
+
+	for ( int i = y; i < y+alto; i++ ) {
+		for ( int j = x; j < x+ancho; j++ ) {
+			video[ i * 80 + j ] = color << 8 | ' ';
+		}
+	}
+}
 
 void main() {
-	for (;;) puts( "Proceso 1" );
-}
+	pid_t pid = getpid();
+	int i;
+	int color = 0;
+	int colores[] = { 0x7f, 0x24, 0x64 };
+	printf( "Proceso %d:", pid );
 
-/*
-int main( const char *argv ) {
-	printf ( "Argumentos: %s\n", argv );
-	puts ( "Numes aleatorios:" );
-	for ( int i = 0; i < 10; i++ )
-		printf ( "%d ", rand() );
-
-	if ( !strcmp( argv, "/boot/ej1 Hola Mundo :-)" ) )
-		return 123456789;
-	return 987654321;
-}
-*/
-/*
-int main(int argc, char **argv) {
-	printf ( "Argumentos: %d\n", argc );
-	for ( int i = 0; i < argc; i++ )
-		printf ( "Argumento %d: %s\n", i+1, argv[i] );
-
-	puts ( "Numeros aleatorios:" );
-	srand( time( NULL ) );
-	for ( int i = 0; i < 10; i++ ) {
-		printf ( "%d ", rand() );
+	for (;;) {
+		cuadrado( 10, 10, 60, 5, colores[color] );
+		color = (color + 1) % (sizeof(colores)/sizeof(int));
+		for ( i = 0; i < 15000; i++ ) {
+			__asm__ __volatile__ ( "nop" );
+		}
 	}
-
-	return 0;
-}*/
+}

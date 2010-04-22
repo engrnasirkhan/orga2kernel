@@ -2,9 +2,10 @@
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
+#include <unistd.h>
 
 void main() {
-	int pid = getpid();
+	pid_t pid = getpid();
 	int i;
 	for ( i = 0; ; i++ )
 		printf( "Proceso %d: %d.               \r", pid, i );

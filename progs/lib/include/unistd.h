@@ -13,6 +13,7 @@ extern int creat( const char *camino, mode_t mode );
 extern pid_t fork( void );
 extern pid_t wait( int *status );
 extern pid_t waitpid( pid_t pid, int *status, int options );
+extern pid_t getpid();
 
 
 CDECLEND

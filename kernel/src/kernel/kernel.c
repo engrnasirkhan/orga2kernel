@@ -104,8 +104,13 @@ static int pf( struct registers *r ) {
 	kprint( r->errcode & 8 ? "Reserved bits en 1 en PD\n" : "Reserved bits en 0 en PD\n" );	
 	kprint( r->errcode & 16 ? "Instruction Fetch\n" : "No fue Instruction Fetch\n" );	
 	kprint( "CR2: 0x%x\nDir: 0x%x:0x%x\n", cr2, r->cs, r->eip );
-	
-	if ( cr2 < KERNEL_MEMMAP ) {
+
+	if ( r->cs == USER_CS ) {
+		kprint( "Matando tarea %d\n", tarea_activa );
+		matar_tarea( tarea_activa );
+	}
+
+	/*if ( cr2 < KERNEL_MEMMAP ) {
 		kprint ( "PDE Flags: %x\n", cr3[ GET_PD_OFFSET(cr2) ] & 0xF );
 		kprint ( "PTE Flags: %x\n", pte[ GET_PT_OFFSET(cr2) ] & 0xF );
 		if ( r->errcode & 1 ) { // Si estaba presente le arreglo esto.
@@ -114,7 +119,7 @@ static int pf( struct registers *r ) {
 			invlpg( GET_BASE_ADDRESS(cr2) );
 			return 0;
 		}
-	}
+	}*/
 	for (;;) hlt();
 }
 
@@ -171,10 +176,11 @@ void kmain(multiboot_info_t* mbd, unsigned int magic ){
 	extern unsigned char ej1[];
 	extern unsigned char ej2[];
 	extern unsigned char ej3[];
+	extern unsigned char ej4[];
 	programas[0] = (programs_t *) ej1;
 	programas[1]= (programs_t *) ej2;
 	programas[2] = (programs_t *) ej3;
-	programas[3]= (programs_t *) ej1;
+	programas[3]= (programs_t *) ej4;
 	programas[4]= (programs_t *) ej1;
 	
 	set_irq_handler( 0, &timer );
