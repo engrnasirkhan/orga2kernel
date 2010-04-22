@@ -154,5 +154,6 @@ uint8_t mmu_uninstall_task_pdt(pde_t *task_pdt);
  * @see mmu_map_pa2va
  */
 uint8_t mmu_kalloc( uint32_t *va );
+void mmu_kfree( uint32_t va );
 
 #endif //__MMU__H__

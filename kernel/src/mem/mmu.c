@@ -325,6 +325,8 @@ static void mmu_init_paging(uint32_t *kpdt)
 
 static void mmu_push_free_frame(page_frame_t *page_frame)
 {
+	reg_t flags;
+	mask_ints(flags);
     if(free_page_frame_stack == NULL){
         //El stack esta vacio
         free_page_frame_stack = page_frame;
@@ -341,10 +343,13 @@ static void mmu_push_free_frame(page_frame_t *page_frame)
     }
     //Incrementamos la cantidad de frames libres
     free_page_frame_count++;
+	 unmask_ints(flags);
 }
 
 static page_frame_t* mmu_pop_free_frame()
 {
+	reg_t flags;
+	mask_ints(flags);
     page_frame_t *frame = NULL;
     //Veamos si hay algun frame en el stack
     if(free_page_frame_stack != NULL)
@@ -356,6 +361,7 @@ static page_frame_t* mmu_pop_free_frame()
 
         free_page_frame_count--;
     }
+	unmask_ints(flags);
 
     return frame;    
 }
@@ -380,7 +386,9 @@ static page_frame_t* mmu_PA_2_page_frame(uint32_t physical_address)
 
 static page_frame_t* mmu_get_page_frame( uint32_t pa )
 {
+	reg_t flags;
     page_frame_t* frame = mmu_PA_2_page_frame( pa );
+	 mask_ints(flags);
     if( frame )
     {
         //veo si estaba en la lista, para decrementar la cantidad de frames libres
@@ -410,6 +418,7 @@ static page_frame_t* mmu_get_page_frame( uint32_t pa )
         frame->prev = NULL;
         frame->ref_count++;
     }
+	 unmask_ints(flags);
     return frame;
 }
 
@@ -584,6 +593,7 @@ uint8_t mmu_alloc_at_VA(pde_t *pdt, uint32_t va, uint8_t perm, uint8_t force_dea
     }
 }
 
+
 uint8_t mmu_free(pde_t *pdt, uint32_t va )
 {
     //Primero obtenemos la pte para obtener la direccion fisica del frame
@@ -727,4 +737,8 @@ uint8_t mmu_kalloc( uint32_t *va ) {
 	pa = mmu_page_frame_2_PA(free_frame);
 	*va = PA2KVA(pa);
 	return E_MMU_SUCCESS;
+}
+
+void mmu_kfree( uint32_t va ) {
+	mmu_free_page_frame( mmu_PA_2_page_frame( GET_BASE_ADDRESS( KVA2PA(va) ) ) );
 }

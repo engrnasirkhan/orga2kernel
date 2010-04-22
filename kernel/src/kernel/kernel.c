@@ -52,11 +52,11 @@ int timer( struct registers *r ) {
 	}
 		
 	//Referente a la actualizacion de pantalla activa
-	++contador_actualizar_pantalla;
+	/*++contador_actualizar_pantalla;
 	if(contador_actualizar_pantalla > TIEMPO_ACTUALIZCION) { 
 		contador_actualizar_pantalla = 0;
 		if( tarea_en_pantalla != -1 )mostrar_slot(tarea_en_pantalla+1);
-	}
+	}*/
 	
 	
 	//Referente a la decrementacion de quantum de tarea_activa
@@ -75,9 +75,13 @@ int timer( struct registers *r ) {
 	return 0;
 }
 
-int teclado( struct registers *r ) { return 0; }
+static void idletask() {
+	for (;;) {
+		hlt();
+	}
+}
 
-int pf( struct registers *r ) {
+static int pf( struct registers *r ) {
 	cli();
 
 	uint32_t cr2 = getCR2();
@@ -145,6 +149,11 @@ void kmain(multiboot_info_t* mbd, unsigned int magic ){
     }
 	//Lanzamos programa para cargar tareas y modificar quantums.
 	set_isr_handler( 14, &pf ); // #PF
+
+	// El idle task... siempre listo... :-)
+	programs_t idle;
+	idle.va_entry = idletask;
+	crear_kthread( &idle, 10 );
 
 	//Iniciamos Scheduler
 	iniciar_scheduler();

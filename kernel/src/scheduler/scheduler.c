@@ -18,9 +18,32 @@
 
 extern tty_t tty_kernel;
 
+void _mapear( pde_t *cr3, uint32_t va, uint32_t pa ) {
+	cr3 = PA2KVA(cr3);
+	pte_t *pte = (pte_t *) GET_BASE_ADDRESS( cr3[ GET_PD_OFFSET(va) ] );
+	pte = PA2KVA(pte);
+
+	pte[ GET_PT_OFFSET(va) ] = GET_BASE_ADDRESS(pa) | PAGE_PRESENT | PAGE_RW | PAGE_USER;
+	if ( GET_BASE_ADDRESS(getCR3()) == KVA2PA(cr3) ) invlpg(va);
+}
+
 //Funcion que muestra menu y parsea los comandos.
 void menu(key s){
-	if (s) tarea_en_pantalla = -1;
+	if (s) {
+		reg_t flags;
+
+		mask_ints(flags);
+
+		if ( tarea_en_pantalla != -1 && tareas[tarea_en_pantalla].hay_tarea ) {
+			struct tss *vieja = (struct tss *) tareas[tarea_en_pantalla].va_tss;
+			memcpy( tareas[tarea_en_pantalla].pantalla, (void *) 0x800b8000, 80 * 25 * 2 );
+			_mapear( GET_BASE_ADDRESS( vieja->cr3 ), 0xb8000, KVA2PA( tareas[tarea_en_pantalla].pantalla ) );
+		}
+
+		tarea_en_pantalla = -1;
+
+		unmask_ints(flags);
+	}
 	//__asm__ __volatile__ ("xchg %bx,%bx");
     kclrscreen();
     kprint("Menu miOS: Como operar \n \n \n \n");
@@ -100,8 +123,7 @@ void scheduler(){
 		if ( tareas[tarea_activa].hay_tarea ) break;
 	}
 	if ( !tareas[tarea_activa].hay_tarea ) {
-		tarea_activa = -1;
-		return;
+		tarea_activa = 10; // IDLE TASK
 	}
 
 	if ( tarea_activa == tarea_anterior ) return;
@@ -125,20 +147,22 @@ void scheduler(){
 
 //Funcion para matar tarea
 //Debe ejecutarse en contexto kernel
-void matar_tarea(char numero_tarea){
+static void matar_tarea_nosched(char numero_tarea){
 	reg_t flags;
 	mask_ints(flags);
 
 //Voy a borrar las cosas que pueda en contexto de kernel
-    kfree(tareas[numero_tarea].pantalla);
-	kfree(tareas[numero_tarea].va_tss);
+	
+    mmu_kfree(tareas[numero_tarea].pantalla);
+	mmu_kfree(tareas[numero_tarea].va_tss);
 
 
 //Voy a poner en cero la estructura de la tarea
 	tareas[numero_tarea].hay_tarea = 0;
 	tareas[numero_tarea].quantum_fijo = 0;
 	tareas[numero_tarea].pantalla = 0;
-	
+	tareas[numero_tarea].va_tss = 0;
+	tareas[numero_tarea].pa_tss = 0;
 
 //Voy a pasarle la direccion de la pdt a un funcion de mmu para que libera todo lo respecto a ella
 	///TODO: faltaria funcion que le pase una pdt y borre todo lo referido a esta
@@ -146,13 +170,47 @@ void matar_tarea(char numero_tarea){
 	unmask_ints(flags);
 }
 
+void matar_tarea( char numero_tarea ) {
+	reg_t flags;
+	mask_ints(flags);
+	matar_tarea_nosched( numero_tarea );
+	/* No podemos volver a la tarea que ya no existe :-( */
+	if (tarea_activa == numero_tarea) {
+		tarea_activa = -1;
+		scheduler(); /* Si no hay nada, saca IDLE :P */
+	}
+	unmask_ints(flags);
+}
+
 
 //Funcion para mostrar un slot en particular
 void mostrar_slot(key s){
-tarea_en_pantalla= s-1;
-if( tareas[s-58].hay_tarea) memcpy( (void *) 0x800b8000, ( void * ) tareas[s-58].pantalla, 80 * 25 * 2 );
-else menu(1);
+	reg_t flags;
+	int id = s - 58;
+	struct tss *viejo, *nuevo;
 
+	mask_ints(flags);
+
+	if ( id < 0 || id > 9 ) return menu(1);
+	if ( !tareas[id].hay_tarea ) return menu(1);
+	if ( tarea_en_pantalla == id ) return;
+
+	if ( tarea_en_pantalla != -1 && tareas[tarea_en_pantalla].hay_tarea ) {
+		/* Copiamos de la pantalla al buffer del usuario. */
+		memcpy( (void *) tareas[tarea_en_pantalla].pantalla, (void *) 0x800b8000, 80 * 25 * 2 );
+		viejo = (struct tss *) tareas[tarea_en_pantalla].va_tss;
+		_mapear( GET_BASE_ADDRESS(viejo->cr3), 0xb8000, KVA2PA( tareas[tarea_en_pantalla].pantalla ) );
+	}
+
+	/* Copiamos del buffer del nuevo usuario a la pantalla. */
+	memcpy( (void *) 0x800b8000, (void *) tareas[id].pantalla, 80 * 25 * 2 );
+
+	/* Realizamos los nuevos mapeos. */
+	nuevo = (struct tss *) tareas[id].va_tss;
+	_mapear( GET_BASE_ADDRESS(nuevo->cr3), 0xb8000, 0xb8000 );
+	tarea_en_pantalla = id;
+
+	unmask_ints(flags);
 }
 
 
@@ -227,7 +285,7 @@ void crear_kthread( programs_t *programa, char id ) {
 
 	/* Sección crítica... nos metemos con las tareas. */
 	mask_ints(flags);
-	if ( tareas[id].hay_tarea ) matar_tarea( id );
+	if ( tareas[id].hay_tarea ) matar_tarea_nosched( id );
 
 	tareas[id].hay_tarea = 1;
 	tareas[id].va_tss = (void *) tss_va;
@@ -237,6 +295,11 @@ void crear_kthread( programs_t *programa, char id ) {
 
 	/* Ya mapeamos todo, ahora construimos la TSS :-) */
 	gdt_fill_tss_segment( g_GDT + id + offset_gdt_tareas, (void *) tss_va, 0x67, 0 );
+
+	if ( tarea_activa == id ) {
+		tarea_activa = -1;
+		scheduler();
+	}
 
 	unmask_ints(flags);
 }
@@ -375,7 +438,7 @@ void crear_tarea( programs_t *programa, char id ) {
 
 	/* Ahora viene la sección crítica... cuando nos metemos con las tareas. */
 	mask_ints(flags);
-	if ( tareas[id].hay_tarea ) matar_tarea( id );
+	if ( tareas[id].hay_tarea ) matar_tarea_nosched( id );
 
 	tareas[id].hay_tarea = 1;
 	tareas[id].va_tss = (void *) tss_va;
@@ -386,6 +449,11 @@ void crear_tarea( programs_t *programa, char id ) {
 
 	/* Ya mapeamos todo, ahora construimos la TSS :-) */
 	gdt_fill_tss_segment( g_GDT + id + offset_gdt_tareas, (void *) tss_va, 0x67, 0 );
+
+	if ( tarea_activa == id ) {
+		tarea_activa = -1;
+		scheduler();
+	}
 
 	unmask_ints(flags);
 }
