@@ -2,14 +2,25 @@
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
-#include <unistd.h>
+//#include <unistd.h>
 
 static int contador;
 
 void main() {
-	pid_t pid = getpid();
-	for ( ; contador < 20000; contador++ ) {
-		printf ( "Proceso %d: %d\n", pid, contador );
-	}
+	
+	int i=1;
+	
+		while(1){
+			i++;
+			i++;
+			for(int a=0; a<1000; a++){
+			 a=a+1;
+			 a--;				
+			}
+			printf("%d \n",i);
+			
+		}
+		
+		
 	exit( 0 );
 }

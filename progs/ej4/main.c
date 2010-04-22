@@ -2,7 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
-#include <unistd.h>
+//#include <unistd.h>
 
 void cuadrado( int x, int y, int ancho, int alto, int color ) {
 	static unsigned short *video = (unsigned short *) 0xb8000;
@@ -15,11 +15,11 @@ void cuadrado( int x, int y, int ancho, int alto, int color ) {
 }
 
 void main() {
-	pid_t pid = getpid();
+	//pid_t pid = getpid();
 	int i;
 	int color = 0;
 	int colores[] = { 0x7f, 0x24, 0x64 };
-	printf( "Proceso %d:", pid );
+	printf( "Proceso 4:"  );
 
 	for (;;) {
 		cuadrado( 10, 10, 60, 5, colores[color] );
