@@ -67,13 +67,13 @@
 
 
 \section*{Introducci\'on}
-\addcontentsline{toc}{section}{Introducci\'on}
+%\addcontentsline{toc}{section}{Introducci\'on}
 El siguiente trabajo tiene como fin aplicar los conocimientos adquiridos en Organización del Computador II, Dpto de Computación, Facultad de Ciencias Exactas y Naturales, Universidad de Buenos Aires.	El proyecto incluye la creacion de un "Sistema Operativo" programado en el lenguaje C y Assembler IA32.
 
 
-
-\section*{Organizaci\'on del C\'odigo Fuente}
-\addcontentsline{toc}{section}{Organizaci\'on del C\'odigo Fuente}
+\newpage
+\section{Organizaci\'on del C\'odigo Fuente}
+% \addcontentsline{toc}{section}{Organizaci\'on del C\'odigo Fuente}
 A continuacion se presenta la jerarquia del codigo fuente.
 
 \begin{figure}[H]
@@ -95,13 +95,14 @@ A continuacion se presenta la jerarquia del codigo fuente.
 \end{figure}
 
 
-\section*{Bootloader}
-
+\section{Bootloader}
+\newpage
 \input{mmu.tex}
 
-\section*{Interrupciones}
+\newpage
+\section{Interrupciones}
 
-\section*{Scheduler}
+\section{Scheduler}
 
 Para la realizaci\'on del Scheduler se implement\'o una pol\'itica de Round Robin. Cada tarea tiene un quantum variable que se gasta cada 1 milisegundo y al terminar este se pasa a la ejecuci\'on de la siguiente tarea.
 
@@ -183,7 +184,7 @@ void crear_tarea(programs programa, char numero_tarea){
     Habilitamos interrupciones.
 }
 \end{verbatim}
-
+\newpage
 \section{Teclado y TTY (o Prompt)}
 Fue necesario para poder interactuar con el sistema implementar un controlador de teclado simple y . El cual permitiera de forma básica aprovechar la interacción del usuario con el sistema. Para ello implementamos una serie de funciones (ubicadas en keyboard.c). Este driver funciona en conjunto con un módulo llamado tty ofreciendo varias funcionalidades.\\
 Tales funcionalidades son registrar una función a una tecla de modo que cuando se pulse esa tecla en vez de ingresarse al prompt se dispare la suscitada función. También lograr que tener la cantidad necesarios de "prompts" como se necesite, y configurar que cuando se introduzcan letras a través de ese prompt sean dirigidos al "prompt" correspondiete.
@@ -238,9 +239,9 @@ Por lo que la idea es inicializar las tty con tty\_init, agregar todas las tty q
 
 Cada uno de estos tty permiten llamar a las funcion $tty\_get\_string$ y $tty\_get_char$ las cuales, en el momento que ocurra el evento deseado (tanto un enter como la entrada de un caracter), llamarán a la funcion previamente designada a este tty. Es importante notar que esta acción es asincronica, por lo que se deberia hacer polling (busy waiting) sobre algun variable de estado, o (más adelante) implementar que las tareas sean marcadas como ocupadas.
 
-
-\section*{C\'omo usar el SO}
-\addcontentsline{toc}{section}{C\'omo usar el SO}
+\newpage
+\section{C\'omo usar el SO}
+% \addcontentsline{toc}{section}{C\'omo usar el SO}
 Para ir al menu se debe presionar la tecla Esc. Ahi mismo podra ingresar todo lo que el menu lo ofrece mediante las instruciones detalladas.
 Con las teclas F1, F2,...,F10 podra moverse entre las tareas que tiene en ejecución.
 
