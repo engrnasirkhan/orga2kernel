@@ -1,0 +1,83 @@
+\section{Scheduler}
+
+Para la realizaci\'on del Scheduler se implement\'o una pol\'itica de Round Robin. Cada tarea tiene un quantum variable que se gasta cada 1 timertick y al terminar éste se pasa a la ejecuci\'on de la siguiente tarea.
+Se uso fuertemente en este la funcionalidad del mmu, por lo cual se serializo el trabajo.
+
+Toda la funcionalidad del Scheduler se encuentra en tres archivos:
+\begin{itemize}
+\item	- scheduler.h
+\item	- tss.h
+\item	- scheduler.c
+\end{itemize}
+
+En la cual podemos encontrar la siguiente estructura que define a una tarea.
+
+\begin{verbatim}
+      typedef struct {
+          char hay_tarea;						
+          unsigned int quantum_fijo;			
+          unsigned int quantum_actual;		
+          char *pantalla;					
+          void *va_tss;						
+          void *pa_tss;						
+      } tarea;
+\end{verbatim}
+
+Contamos con las siguientes variables globales:
+
+\begin{verbatim}
+      tarea tareas[10];
+      char tarea_activa;	
+      char tarea_en_pantalla;
+      char contador_actualizar_pantalla;
+      programs_t* programas[5];
+\end{verbatim}
+
+
+Y con las siguientes funciones:
+
+\begin{itemize}
+\item \begin{verbatim}void menu(); \end{verbatim}
+\item \begin{verbatim}void scheduler();\end{verbatim}
+\item \begin{verbatim}void matar_tarea(char numero_tarea);\end{verbatim}
+\item \begin{verbatim}void mostrar_slot(char s);\end{verbatim}
+\item \begin{verbatim}void iniciar_scheduler();\end{verbatim}
+\item \begin{verbatim}void crear_tarea(programs_t programa, char numero_tarea);\end{verbatim}
+\end{itemize}
+
+\subsection{void menu()}
+Es el procedimiento encargado mostrar el menu de texto (el cual explica la operatoria) por pantalla.
+
+\subsection{void scheduler()}
+Es el procedimiento encargado de pasar a la siguiente tarea, consultando las variables globales, elije la próxima tarea y hace un jmp a ella. Modificando las variables correspondientes para conservar la coherencia.
+
+\subsection{void matar\_tarea(char numero\_tarea) }
+Es el procedimiento encargado de desalojar la tarea \begin{it}numero\_tarea\end{it} del sistema. Libera toda la memoria que pidio al iniciarla y actualiza variables para conservar la coherencia.
+
+\subsection{void mostrar\_slot(char s)}
+Es el procedimiento encargado de mostrar en pantalla la tarea \begin{it}s\end{it} pasada como argumento. Pasando del buffer de pantalla de \begin{it}s\end{it} a la pantalla real, la informacion correspondiente.
+
+\subsection{void iniciar\_scheduler()}
+Es el procedimiento encargado de setear todas las variables iniciales para el buen funcionamiento del schduler. También lanza el menu.
+
+\subsection{void crear\_tarea(programs\_t programa, char numero\_tarea)}
+Es el procedimiento encargado de ingresar un programa al sistema, conviertiendolo en tarea. Se ejecuta en un entorno Kernel.
+El siguiente pseudocodigo especifica su función.
+\begin{verbatim}
+void crear_tarea(programs programa, char numero_tarea){
+    
+    Deshabilitamos Interrupciones.
+    Si existe tarea corriendo en slot numero_tarea la matamos.
+    Creamos nuevo directorio tabla de pagina.
+    Creamos tss para nueva tarea.
+    Pedimos paginas para codigo y mapeamos en el DTP de la tarea a ingresar.
+    Copiamos codigo a paginas pedidas.
+    Pedimos pagina para pila y mapeamos en el DTP de la tarea a ingresar.
+    Modificamos GDT para agregar el Descriptor correspondiente a esta tarea.
+    Llenamos tss con los datos validos.
+    Creamos buffer de video para nueva tarea.
+    Mapeamos la 0xb8000 al DTP de la nueva tarea a su buffer.
+    Modificamos las variables correspondientes al scheduler.
+    Habilitamos interrupciones.
+}
+\end{verbatim}

@@ -7,7 +7,7 @@
  \usepackage[spanish]{babel}   %ver bien como es
 \usepackage[utf8]{inputenc}
 \usepackage{moreverb}
-\hoffset=-2.5cm
+\hoffset=-1.5cm
 \textwidth=17cm
 \begin{document}
  
@@ -68,7 +68,8 @@
 
 \section{Introducci\'on}
 %\addcontentsline{toc}{section}{Introducci\'on}
-El siguiente trabajo tiene como fin aplicar los conocimientos adquiridos en Organización del Computador II, Dpto de Computación, Facultad de Ciencias Exactas y Naturales, Universidad de Buenos Aires.	El proyecto incluye la creacion de un "Sistema Operativo" programado en el lenguaje C y Assembler IA32.
+El siguiente trabajo tiene como fin aplicar los conocimientos adquiridos en Organización del Computador II, Dpto de Computación, Facultad de Ciencias Exactas y Naturales, Universidad de Buenos Aires.	El proyecto incluye la creacion de un "Sistema Operativo" programado en el lenguaje C y Assembler IA32. Intentaremos brindar una plataforma en la cual puedan correr varios programas simultaneamente compilados con gcc.
+\\
 \\
 \\
 \begin{figure}[H]
@@ -77,13 +78,14 @@ El siguiente trabajo tiene como fin aplicar los conocimientos adquiridos en Orga
 \caption{Diagrama de capas.}
 \end{figure}
 
-El diseño del sistema esta bastante influenciado por \emph{Understanding The Linux Kernel, 3rd Edition}. Propone un sistema de segmentación flat, paginación y multi task.
+El diseño del sistema esta bastante influenciado por \emph{Understanding The Linux Kernel, 3rd Edition} y \emph{Operating Systems Design and Implementation 2nd Edition, Tanenbaum}. Propone un sistema de segmentación flat, paginación y multi task.
 
 \newpage
 \section{Organizaci\'on del C\'odigo Fuente}
 % \addcontentsline{toc}{section}{Organizaci\'on del C\'odigo Fuente}
 A continuacion se presenta la jerarquia del codigo fuente.
-
+\\
+\\
 \begin{figure}[H]
 \centering
 \subfloat{\includegraphics[width=0.5\textwidth]{imagenes/goblal.png}}
@@ -102,96 +104,95 @@ A continuacion se presenta la jerarquia del codigo fuente.
 \caption{Diagrama de jerarquia de archivos (cont).}
 \end{figure}
 
-
+\newpage
 \section{Bootloader}
+En cuanto al Bootloader, se barajaron varias opciones que se mencionan a continuación.
+
+\subsection{GRUB}
+Este bootloader cumple con la especificación multiboot. Cualquier bootloader que lo haga es capaz de bootear un archivo que cumpla con las siguientes propiedades:
+
+Esté en formato ELF
+Defina 3 enteros de 32 bits (en los primeros 8KB del archivo y alineados a 4 Bytes) con los siguientes datos (y en el siguiente orden):
+0x1BADB002: Un número "mágico" para identificar esta estructura de datos.
+flags: Un conjunto de bits que le indican a GRUB qué cosas hacer (además de cargarnos en memoria)
+checksum: Una suma de comprobación para verificar que realmente se trata de la estructura adecuada. checksum = -(flags + 0x1BADB002)
+Si no está en formato ELF, se lo puede indicar en los flags y luego indicarle a mano (agregando campos a la estructura) dónde cargar el código y demás.
+
+\begin{itemize}
+\item Ventajas
+\\
+Relativamente sencillo de aprender.
+Puede bootear de practicamente cualquier medio.
+Reconoce montones de sistemas de archivos: FAT, ext2, ext3, reiserfs, xfs, iso9660, etc.
+Obtiene el mapa de memoria del BIOS y nos los pasa a nosotros.
+Puede bootear archivos ELFs.
+
+\item Desventajas
+\\
+Si bien sencillo, también requiere un poco de "setup" extra.
+Muy pesado, demasiada funcionalidad para lo que podríamos necesitar.
+
+\end{itemize}
+
+
+\subsection{Lector de Sectores del Disco}
+\begin{itemize}
+\item Ventajas
+\\
+Sencillo de entender.
+Sencillo de empezar a utilizar.
+Extremadamente liviano.
+La sensación de "lo hizimos nosotros" :P
+Se pueden elegir los distintos drives cambiando el registro dl. La especificacion de como hacerlo esta en 
+
+\item Desventajas
+\\
+No respeta ningún filesystem.
+No provee información acerca del mapa de memoria.
+No pasa argumentos al kernel.
+No es flexible como GRUB.
+
+
+\end{itemize}
+
+\subsection{FAT32 Bootloader}
+
+\begin{itemize}
+\item Ventajas
+\\
+Sencillo.
+Pequeño.
+Reconoce al menos un filesystem.
+
+\item Desventajas 
+\\
+Reconoce sólo un filesystem.
+Requiere modificaciones al código fuente para cumplir nuestras espectativas.
+No provee información acerca del mapa de memoria.
+No pasa argumentos al kernel.
+No es flexible como GRUB.
+\end{itemize}
+
+
+
 \newpage
 \input{mmu.tex}
-
 \newpage
 
-\section{Scheduler}
 
-Para la realizaci\'on del Scheduler se implement\'o una pol\'itica de Round Robin. Cada tarea tiene un quantum variable que se gasta cada 1 timertick y al terminar éste se pasa a la ejecuci\'on de la siguiente tarea.
-Se uso fuertemente en este la funcionalidad del mmu, por lo cual se serializo el trabajo.
+\input{vmm.tex}
 
-Toda la funcionalidad del Scheduler se encuentra en tres archivos:
-\begin{itemize}
-\item	- scheduler.h
-\item	- tss.h
-\item	- scheduler.c
-\end{itemize}
-
-En la cual podemos encontrar la siguiente estructura que define a una tarea.
-
-\begin{verbatim}
-      typedef struct {
-          char hay_tarea;						
-          unsigned int quantum_fijo;			
-          unsigned int quantum_actual;		
-          char *pantalla;					
-          void *va_tss;						
-          void *pa_tss;						
-      } tarea;
-\end{verbatim}
-
-Contamos con las siguientes variables globales:
-
-\begin{verbatim}
-      tarea tareas[10];
-      char tarea_activa;	
-      char tarea_en_pantalla;
-      char contador_actualizar_pantalla;
-      programs_t* programas[5];
-\end{verbatim}
+\newpage
+\input{scheduler.tex}
 
 
-Y con las siguientes funciones:
 
-\begin{itemize}
-\item \begin{verbatim}void menu(); \end{verbatim}
-\item \begin{verbatim}void scheduler();\end{verbatim}
-\item \begin{verbatim}void matar_tarea(char numero_tarea);\end{verbatim}
-\item \begin{verbatim}void mostrar_slot(char s);\end{verbatim}
-\item \begin{verbatim}void iniciar_scheduler();\end{verbatim}
-\item \begin{verbatim}void crear_tarea(programs_t programa, char numero_tarea);\end{verbatim}
-\end{itemize}
 
-\subsection*{ void menu()}
-Es el procedimiento encargado mostrar el menu de texto (el cual explica la operatoria) por pantalla.
 
-\subsection*{ void scheduler()}
-Es el procedimiento encargado de pasar a la siguiente tarea, consultando las variables globales, elije la próxima tarea y hace un jmp a ella. Modificando las variables correspondientes para conservar la coherencia.
 
-\subsection*{ void matar\_tarea(char numero\_tarea) }
-Es el procedimiento encargado de desalojar la tarea \begin{it}numero\_tarea\end{it} del sistema. Libera toda la memoria que pidio al iniciarla y actualiza variables para conservar la coherencia.
 
-\subsection*{void mostrar\_slot(char s)}
-Es el procedimiento encargado de mostrar en pantalla la tarea \begin{it}s\end{it} pasada como argumento. Pasando del buffer de pantalla de \begin{it}s\end{it} a la pantalla real, la informacion correspondiente.
 
-\subsection*{void iniciar\_scheduler()}
-Es el procedimiento encargado de setear todas las variables iniciales para el buen funcionamiento del schduler. También lanza el menu.
 
-\subsection*{void crear\_tarea(programs\_t programa, char numero\_tarea)}
-Es el procedimiento encargado de ingresar un programa al sistema, conviertiendolo en tarea. Se ejecuta en un entorno Kernel.
-El siguiente pseudocodigo especifica su función.
-\begin{verbatim}
-void crear_tarea(programs programa, char numero_tarea){
-    
-    Deshabilitamos Interrupciones.
-    Si existe tarea corriendo en slot numero_tarea la matamos.
-    Creamos nuevo directorio tabla de pagina.
-    Creamos tss para nueva tarea.
-    Pedimos paginas para codigo y mapeamos en el DTP de la tarea a ingresar.
-    Copiamos codigo a paginas pedidas.
-    Pedimos pagina para pila y mapeamos en el DTP de la tarea a ingresar.
-    Modificamos GDT para agregar el Descriptor correspondiente a esta tarea.
-    Llenamos tss con los datos validos.
-    Creamos buffer de video para nueva tarea.
-    Mapeamos la 0xb8000 al DTP de la nueva tarea a su buffer.
-    Modificamos las variables correspondientes al scheduler.
-    Habilitamos interrupciones.
-}
-\end{verbatim}
 \newpage
 \section{Teclado y TTY (o Prompt)}
 Fue necesario para poder interactuar con el sistema implementar un controlador de teclado simple y . El cual permitiera de forma básica aprovechar la interacción del usuario con el sistema. Para ello implementamos una serie de funciones (ubicadas en keyboard.c). Este driver funciona en conjunto con un módulo llamado tty ofreciendo varias funcionalidades.\\
