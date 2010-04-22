@@ -64,8 +64,8 @@ void stacktrace( int saltar, int cuantas ) {
 	while ( saltar-- ) ebp = (reg_t *) *ebp;
 
 	while ( cuantas-- && ebp ) {
-		kprint( "ebp: 0x%x, eip: 0x%x, args: 0x%x, 0x%x, 0x%x\n",
-			*ebp, *(ebp + 4), *(ebp + 8), *(ebp + 12), *(ebp + 16) );
+		kprint( "ebp: 0x%x, eip: 0x%x, args: 0x%x 0x%x 0x%x 0x%x\n",
+			ebp, *(ebp+1), *(ebp+2), *(ebp+3), *(ebp+4), *(ebp+5) );
 		ebp = (reg_t *) *ebp;
 	}
 }

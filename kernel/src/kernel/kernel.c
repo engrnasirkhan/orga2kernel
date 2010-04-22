@@ -106,10 +106,6 @@ int pf( struct registers *r ) {
 
 void pruebatarea()  { for (;;) kprint("HOLA"); }
 void pruebatarea2() { for (;;) kprint("chau"); }
-void prueba( int n ) {
-	if ( n == 0 ) stacktrace(0,10);
-	else prueba(n-1);
-}
 
 void kmain(multiboot_info_t*, unsigned int magic ) __noreturn;
 void kmain(multiboot_info_t* mbd, unsigned int magic ){
@@ -164,11 +160,9 @@ void kmain(multiboot_info_t* mbd, unsigned int magic ){
 	programas[3]= (programs_t *) ej1;
 	programas[4]= (programs_t *) ej1;
 	
-
-
 	set_irq_handler( 0, &timer );
 	set_irq_handler( 1, &irq_keyboard );
-menu(1);
+   menu(1);
 	sti();
     //Lanzamos programa menu
 	while(1);
