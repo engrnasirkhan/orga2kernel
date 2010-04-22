@@ -234,9 +234,9 @@ int tty_tty_add(tty_t* tty, tty_buffer_out_f out_f);
 int tty_tty_change(tty_t* tty);
 \end{verbatim}
 
-Por lo que la idea es inicializar las tty con tty_init, agregar todas las tty que se necesiten con tty_add , e ir cambiando entre ellas con tty_change. Se decidio implementar que siempre se recibe un puntero a tty_t, lo cual funciona muy parecido a libreria pthread, de modo que es tanto entrada como salida segun como se necesite, cuando se crea se deja alli el valor, y para las demas acciones es de entrada. Por lo que el creador de cada tty debe administrar de alguna forma cada tty con los tty_t.
+Por lo que la idea es inicializar las tty con tty\_init, agregar todas las tty que se necesiten con tty\_add , e ir cambiando entre ellas con tty\_change. Se decidio implementar que siempre se recibe un puntero a tty\_t, lo cual funciona muy parecido a libreria pthread, de modo que es tanto entrada como salida segun como se necesite, cuando se crea se deja alli el valor, y para las demas acciones es de entrada. Por lo que el creador de cada tty debe administrar de alguna forma cada tty con los tty\_t.
 
-Cada uno de estos tty permiten llamar a las funcion tty_get_string y tty_get_char las cuales, en el momento que ocurra el evento deseado (tanto un enter como la entrada de un caracter), llamarán a la funcion previamente designada a este tty. es importante notar que esta acción es asincronica, por lo que se deberia hacer polling (busy waiting) sobre algun variable de estado, o (más adelante) implementar que las tareas sean marcadas como ocupadas.
+Cada uno de estos tty permiten llamar a las funcion $tty\_get\_string$ y $tty\_get_char$ las cuales, en el momento que ocurra el evento deseado (tanto un enter como la entrada de un caracter), llamarán a la funcion previamente designada a este tty. Es importante notar que esta acción es asincronica, por lo que se deberia hacer polling (busy waiting) sobre algun variable de estado, o (más adelante) implementar que las tareas sean marcadas como ocupadas.
 
 
 \section*{C\'omo usar el SO}
