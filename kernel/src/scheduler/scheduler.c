@@ -54,6 +54,8 @@ if( entrada[0]=='q' && entrada[1]=='u' && entrada[2]=='a' && entrada[3]=='n' && 
 
 
 if(modo==0){
+	//crear
+	
 	letra_tarea= entrada[7];
 	numero_slot= entrada[9] - '0';	
 	crear_tarea( programas[ letra_tarea - 'a'], numero_slot);
@@ -64,13 +66,18 @@ if(modo==0){
 }
 
 if(modo==1){
+	//matar
 	numero_slot= entrada[6] - '0';	 
-	matar_tarea(numero_slot);
-	kprint("Mato la tarea del slot ");
-	kprint("%i \n", numero_slot+ '0');
+	if(tareas[numero_slot].hay_tarea) {
+		matar_tarea(numero_slot);
+		kprint("Mato la tarea del slot ");
+		kprint("%i \n", numero_slot+ '0');
+	
+	}
 }
 
 if(modo==2){
+	//cambiar quantum
 	numero_slot= entrada[8] - '0';	
 	quantum= entrada[10] - '0';	
 	if( 0< quantum && quantum <21){

@@ -135,9 +135,6 @@ void kmain(multiboot_info_t* mbd, unsigned int magic ){
     key_register(mostrar_slot,65);
     key_register(mostrar_slot,66);
     key_register(mostrar_slot,67);
-    key_register(mostrar_slot,68);
-    key_register(mostrar_slot,69);
-    key_register(mostrar_slot,70);
     
     
     
