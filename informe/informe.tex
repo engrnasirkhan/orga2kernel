@@ -38,7 +38,7 @@
 	    \hline
 		Pivetta, Santiago & 318/08 & santiago.pivetta@gmail.com \\
         \hline
-		Semelman, Mariano & N/N & noinflection@gmail.com \\
+		Semelman, Mariano & 143/08 & marianosoy@gmail.com \\
         \hline
     \end{tabular}
 \end{center}
@@ -183,6 +183,60 @@ void crear_tarea(programs programa, char numero_tarea){
     Habilitamos interrupciones.
 }
 \end{verbatim}
+
+\section{Teclado y TTY (o Prompt)}
+Fue necesario para poder interactuar con el sistema implementar un controlador de teclado simple y . El cual permitiera de forma básica aprovechar la interacción del usuario con el sistema. Para ello implementamos una serie de funciones (ubicadas en keyboard.c). Este driver funciona en conjunto con un módulo llamado tty ofreciendo varias funcionalidades.\\
+Tales funcionalidades son registrar una función a una tecla de modo que cuando se pulse esa tecla en vez de ingresarse al prompt se dispare la suscitada función. También lograr que tener la cantidad necesarios de "prompts" como se necesite, y configurar que cuando se introduzcan letras a través de ese prompt sean dirigidos al "prompt" correspondiete.
+
+Para todo esto se provee la siguiente interfaz:
+
+\begin{verbatim}
+
+En el driver de video (screen.c)
+    //funcion que recibe un caracter o una serie de ellos y los imprime en la zona de prompt
+    size_t kprint_tty(uint8_t * );
+    //funcion que limpia el prompt
+    void kprint_tty_clear();
+    //funcion para borrar un caracter
+    void kprint_tty_backspace();
+
+
+tty_buffer_out_f  //tipo de funcion que recibe el buffer que se escribe en el prompt
+
+//los prompt o tty se pueden crear dinamicamente e ir guardando en una lista.
+//es por eso que se utilizo esta estructura para guardar toda la informacion 
+//necesarias para administrar cada uno de los prompt.
+struct tty_tty_node {
+    
+    tty_t tty;
+    uint8_t buff[MAX_TTY+2];
+    uint32_t buff_pos;
+    bool expects_char;
+    bool expects_string;
+    bool enabled;
+    tty_buffer_out_f buffer_out;
+    void * next;
+};
+
+/*escribe un caracter en el prompt */
+void tty_put_key(key);
+/*el proximo caracter que se presione se enviara a travez del tty_buffer_out_f asociado
+ * solo si no se pidio */
+bool tty_get_key(tty_t* tty);
+/*la proxima linea que se ingrese se enviara a travez del tty_buffer_out_f asociado
+ * solo si no se pidio */
+bool tty_get_string(tty_t* tty);
+/* inicializa el tty con 1 TTYs al comienzo */
+int tty_init(tty_t* tty, tty_buffer_out_f out_f);
+/* agrega un tty con un buffer asociado, tty es de salida, devuelve el tty asociado a esta vista. */
+int tty_tty_add(tty_t* tty, tty_buffer_out_f out_f);
+/* cambia al tty designado */
+int tty_tty_change(tty_t* tty);
+\end{verbatim}
+
+Por lo que la idea es inicializar las tty con tty_init, agregar todas las tty que se necesiten con tty_add , e ir cambiando entre ellas con tty_change. Se decidio implementar que siempre se recibe un puntero a tty_t, lo cual funciona muy parecido a libreria pthread, de modo que es tanto entrada como salida segun como se necesite, cuando se crea se deja alli el valor, y para las demas acciones es de entrada. Por lo que el creador de cada tty debe administrar de alguna forma cada tty con los tty_t.
+
+Cada uno de estos tty permiten llamar a las funcion tty_get_string y tty_get_char las cuales, en el momento que ocurra el evento deseado (tanto un enter como la entrada de un caracter), llamarán a la funcion previamente designada a este tty. es importante notar que esta acción es asincronica, por lo que se deberia hacer polling (busy waiting) sobre algun variable de estado, o (más adelante) implementar que las tareas sean marcadas como ocupadas.
 
 
 \section*{C\'omo usar el SO}
